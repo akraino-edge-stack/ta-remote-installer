@@ -1,0 +1,35 @@
+HOME            = .
+RANDFILE        = $ENV::HOME/.rnd
+
+####################################################################
+[ req ]
+prompt = no
+default_bits       = 2048
+default_keyfile    = clientkey.pem
+distinguished_name = client_distinguished_name
+req_extensions     = client_req_extensions
+string_mask        = utf8only
+
+####################################################################
+[ client_distinguished_name ]
+countryName          = DE
+organizationName     = Customer X
+commonName           = Customer
+emailAddress         = test@client.com
+
+####################################################################
+[ client_req_extensions ]
+
+subjectKeyIdentifier = hash
+basicConstraints     = CA:FALSE
+keyUsage             = digitalSignature, keyEncipherment
+subjectAltName       = @alternate_names
+nsComment            = "OpenSSL Generated Certificate"
+
+####################################################################
+[ alternate_names ]
+
+DNS.1  = ramuller.zoo.dynamic.nsn-net.net
+DNS.2  = www.client.com
+DNS.3  = mail.client.com
+DNS.4  = ftp.client.com

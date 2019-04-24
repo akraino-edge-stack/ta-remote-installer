@@ -1,0 +1,32 @@
+HOME            = .
+RANDFILE        = $ENV::HOME/.rnd
+
+####################################################################
+[ req ]
+prompt = no
+default_bits       = 2048
+default_keyfile    = badboykey.pem
+distinguished_name = badboy_distinguished_name
+req_extensions     = badboy_req_extensions
+string_mask        = utf8only
+
+####################################################################
+[ badboy_distinguished_name ]
+countryName          = SE
+organizationName     = bad
+commonName           = boy
+emailAddress         = test@badboy.com
+
+####################################################################
+[ badboy_req_extensions ]
+
+subjectKeyIdentifier = hash
+basicConstraints     = CA:FALSE
+keyUsage             = digitalSignature, keyEncipherment
+subjectAltName       = @alternate_names
+nsComment            = "OpenSSL Generated Certificate"
+
+####################################################################
+[ alternate_names ]
+
+DNS.1  = bad-boy.net
