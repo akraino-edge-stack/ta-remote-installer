@@ -1,0 +1,111 @@
+Pre-requisite:
+
+1. The jenkins generating rec artifacts is available and producing both the rec golden iso image and the provisioning iso image.
+
+2. Create a new repo containing the target CD environments configurations. The configuration contains the following for each CD environment.
+
+   - user_config.yaml: The user configuration yaml file.
+
+   - admin_password: The cloudadmin user password.
+
+3. The machine from where the remote installation is done is able to reach the BMCs and external network of the edge cloud.
+
+Work-flow:
+
+1. Create a new directory to be used for holding the installation artifacts.
+
+   #create the base directory
+   mkdir $BASEDIR
+
+   #images sub-directory 
+   mkdir $BASDIR/images
+
+   #certificates sub-directory
+   mkdir $BASEDIR/certificates
+
+   #user configuration and cloud admin information
+   mkdir $BASEDIR/user-configs
+
+   #installation logs directory
+   mkdir $BASEDIR/installations
+
+2. Get REC golden image from REC jenkins artifacts and copy it to the images sub-directory under the directory created in (1).
+
+   cd $BASEDIR/images/
+   wget $URL_JENKINS_ARTIFACTS/rec.iso
+
+
+3. Get REC booting image from REC jenkins artifacts and copy it to the images sub-directory under the directory created in (1).
+
+   cd $BASEDIR/images/
+   wget $URL_JENKINS_ARTIFACTS/boot.iso
+
+4. Get the user-config.yaml file and admin_password file for the CD environment from the cd-environments repo and copy it to the user-configs sub-directory under the directory created in (1). Copy the files to a cloud-specific directory identiried by the cloudname.
+
+   cd $BASEDIR/user-configs/
+   mkdir $CLOUDNAME
+   cd $CLOUDNAME
+   wget $URL_CD_ENVS/$ENV/user_config.yaml 
+   wget $URL_CD_ENVS/$ENV/admin_password
+
+5. Checkout the remote-installer repo from LF
+
+   mkdir /opt/git-repos/
+   cd /opt/git-repos/
+   git clone https://gerrit.akraino.org/r/ta/remote-installer
+
+6. Copy the sever certificates, the client certificates in addition to CA certificate to the certificates sub-directory under the directory created in (1). 
+   The following certificates are expected to be available in the directory:
+
+   cacert.pem: The CA certificate
+   servercert.pem: The server certificate signed by the CA
+   serverkey.pem: The server key
+   clientcert.pem: The client certificate signed by the CA
+   clientkey.pem: The client key
+
+   For generating own CA, client and server certificates you can execute the following script from the remote-installer repo:
+
+   cd /opt/git-repos/remote-installer/test/certificates/
+   ./create.sh
+   cp *.pem $BASEDIR/certificates/
+
+7. Build the remote installer docker-image.
+
+    cd /opt/git-repos/remote-installer/scripts/
+    ./build.sh
+
+8. Start the remote installer
+
+   cd /opt/git-repos/remote-installer/scripts/
+   ./start.sh -a $API_PORT -s $HTTPS_PORT -b $BASEDIR -e $EXTERNAL_HOST_IP
+
+9. Wait for the remote installer to become running.
+
+10. Start the installation by sending the following http request to the installer API
+
+    POST url: https://localhost:$API_PORT/v1/installations
+    REQ body json- encoded
+    {
+        'cloud-name': $CLOUDNAME,
+        'iso': $REC_ISO_IMAGE_NAME,
+        'provisioning-iso': $REC_PROVISIONING_ISO_NAME
+    }
+    REP body json-encoded 
+    {
+        'uuid': $INSTALLATION_UUID
+    }
+
+11. Follow the progress of the installation by sending the following http request to the installer API
+
+    GET url: https://localhost:$API_PORT/v1/installations/$INSTALLATION_UUID/state
+    REP body json-encoded 
+    {
+        'status': <ongoing|completed|failed>,
+        'description': <description>,
+        'percentage': <the progess precentage>
+    }
+
+12. When installation is completed stop the remote installer.
+
+    cd /opt/git-repos/remote-installer/scripts/
+    ./stop.sh
