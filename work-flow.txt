@@ -98,6 +98,8 @@ Work-flow:
 11. Follow the progress of the installation by sending the following http request to the installer API
 
     GET url: https://localhost:$API_PORT/v1/installations/$INSTALLATION_UUID/state
+    {
+    }
     REP body json-encoded 
     {
         'status': <ongoing|completed|failed>,
