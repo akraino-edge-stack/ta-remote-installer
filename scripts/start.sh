@@ -22,6 +22,7 @@ BASE_DIR=""
 CONT_NAME="remote-installer"
 EXT_IP=""
 HTTPS_PORT="443"
+SSH_PORT="22222"
 IMG_NAME="remote-installer"
 ROOT_PW="root"
 
@@ -37,15 +38,17 @@ help()
     echo -e "$(basename $0) [-h -a <api-port> -c <cont> -i <image> -r <pw> -s <https-port> ] -b <basedir> -e <ip-addr>"
     echo -e "   -h  display this help"
     echo -e "   -a  rest API port, default $API_PORT"
-    echo -e "   -c  container name, default $CONT_NAME"
     echo -e "   -b  base directory, which contains images, certificates, etc."
+    echo -e "   -c  container name, default $CONT_NAME"
+    echo -e "   -d  use docker bridged networking, default host"
     echo -e "   -e  external ip address of  the docker"
-    echo -e "   -i  secure https port, default $IMG_NAME"
+    echo -e "   -i  image name, default $IMG_NAME"
+    echo -e "   -l  login port for ssh, default $SSH_NAME"
     echo -e "   -p  root password, default $ROOT_PW"
     echo -e "   -s  secure https port, default $HTTPS_PORT"
 }
 
-while getopts "ha:b:e:s:c:p:i:" arg; do
+while getopts "ha:b:de:l:s:c:p:i:" arg; do
     case $arg in
         h)
             help
@@ -72,6 +75,12 @@ while getopts "ha:b:e:s:c:p:i:" arg; do
         p)
             ROOT_PW="$OPTARG"
             ;;
+        l)
+            SSH_PORT="$OPTARG"
+            ;;
+        d)
+            DOCKER_BRIDGE="YES"
+            ;;
         *)
             error "Unknow argument!" showhelp
             ;;
@@ -81,14 +90,34 @@ done
 [ -n "$EXT_IP" ] || error "No external IP defined!" showhelp
 [ -n "$BASE_DIR" ] || error "No base directory defined!" showhelp
 
-cont_id="$(docker run --detach --rm --privileged \
-     --env API_PORT="$API_PORT" \
-     --env HOST_ADDR="$EXT_IP" \
-     --env HTTPS_PORT="$HTTPS_PORT" \
-     --env PW="$ROOT_PW" \
-     --volume "$BASE_DIR":/opt/remoteinstaller --publish "$HTTPS_PORT":"$HTTPS_PORT" -p 2049:2049 -p "$API_PORT":"$API_PORT" --name "$CONT_NAME" "$IMG_NAME")" \
-       || error "failed to start container"
+DOCKER_ENV="--env API_PORT=$API_PORT \
+        --env HOST_ADDR=$EXT_IP \
+        --env HTTPS_PORT=$HTTPS_PORT \
+        --env PW=$ROOT_PW \
+        --env SSH_PORT=$SSH_PORT "
 
+
+if [ -n "$DOCKER_BRIDGE" ]
+then
+    echo -e "Start container with bridged networking..."
+    cont_id="$(docker run --detach --rm --privileged \
+        $DOCKER_ENV \
+        --network=bridge \
+        --volume "$BASE_DIR":/opt/remoteinstaller \
+        --publish "$HTTPS_PORT":"$HTTPS_PORT" --publish 2049:2049 --publish "$API_PORT":"$API_PORT" \
+        --name "$CONT_NAME" "$IMG_NAME")" \
+        || error "failed to start container"
+    echo -e "IP : $(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$cont_id")"
+
+else
+    echo -e "Start container with host networking..."
+    cont_id="$(docker run --detach --rm --privileged \
+        $DOCKER_ENV \
+        --network=host \
+        --volume "$BASE_DIR":/opt/remoteinstaller \
+        --name "$CONT_NAME" "$IMG_NAME")" \
+        || error "failed to start container"
+fi
 echo -e "Container successfully started"
 echo -e "ID : $cont_id"
-echo -e "IP : $(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$cont_id")"
+echo -e "Using ssh port : $SSH_PORT"

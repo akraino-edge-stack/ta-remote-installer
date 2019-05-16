@@ -29,7 +29,8 @@ CLIENT_CERT="clientcert.pem" \
 CLIENT_KEY="clientkey.pem" \
 SERVER_CERT="servercert.pem" \
 SERVER_KEY="serverkey.pem" \
-INSTALLER_MOUNT="/opt/remoteinstaller"
+INSTALLER_MOUNT="/opt/remoteinstaller" \
+SSH_PORT="22"
 
 ENV IMAGES_STORE="$INSTALLER_MOUNT/images"
 ENV IMAGES_HTML="/var/www/lighttpd/images"
@@ -96,17 +97,24 @@ RUN mkdir -p "$SCRIPTS_DIR" \
 
 COPY src/scripts/get_journals.sh src/scripts/print_hosts.py "$SCRIPTS_DIR"/
 
-RUN echo '#!/bin/bash' >>$STARTUP \
+RUN echo '#!/bin/bash -x' >>$STARTUP \
+&& echo "function handle_sigterm() {" >>$STARTUP \
+&& echo -e "  echo Stopping nfs-server" >>$STARTUP \
+&& echo -e "  systemctl stop nfs-server" >>$STARTUP \
+&& echo -e "  exit 0" >>$STARTUP \
+&& echo "}" >>$STARTUP \
+&& echo "trap 'handle_sigterm' 15" >>$STARTUP \
 && echo 'printenv >/etc/remoteinstaller/environment' >>$STARTUP \
-&& echo mkdir /run/systemd/system >>$STARTUP \
-&& echo nohup /usr/lib/systemd/systemd --system '&>/dev/null &' >>$STARTUP \
+&& echo 'mkdir /run/systemd/system' >>$STARTUP \
+&& echo 'nohup /usr/lib/systemd/systemd --system' '&>/dev/null &' >>$STARTUP \
 && echo "echo -e \"\$PW\n\$PW\n\n\" |passwd" >>$STARTUP \
 && echo mount -o bind "$IMAGES_STORE" "$IMAGES_HTML" >>$STARTUP \
 && echo 'sed -i "s/server.port = 80/server.port = $HTTPS_PORT/" /etc/lighttpd/lighttpd.conf' >>$STARTUP \
+&& echo 'sed -i "s/.*Port 22/Port $SSH_PORT/" /etc/ssh/sshd_config' >>$STARTUP \
 # && echo "echo \\\$SERVER[\\\"sockets\\\"] == \\\"0.0.0.0:\$HTTPS_PORT {}\\\" >> /etc/lighttpd/lighttpd.conf" >>$STARTUP \
 && echo python /lib/python2.7/site-packages/remoteinstaller-1.0-py2.7.egg/remoteinstaller/server/server.py \
-   -H \$API_LISTEN_ADDR -P \$API_PORT -S \$HOST_ADDR \
-   -C \$SERVER_CERT -K \$SERVER_KEY -c \$CLIENT_CERT -k \$CLIENT_KEY -A \$CA_CERT -d \
+   -H \$API_LISTEN_ADDR -P \$API_PORT -S \$HOST_ADDR -T \$HTTPS_PORT \
+   -C \$SERVER_CERT -K \$SERVER_KEY -c \$CLIENT_CERT -k \$CLIENT_KEY -A \$CA_CERT -d \& \
    >>$STARTUP \
 && echo 'while [ false ]; do sleep 5 ;done' >>$STARTUP  \
 && chmod +x $STARTUP
