@@ -40,7 +40,6 @@ while getopts "hs" arg; do
 done
 
 docker build \
-  --network=host \
   --no-cache \
   --force-rm \
   --build-arg HTTP_PROXY="${http_proxy}" \

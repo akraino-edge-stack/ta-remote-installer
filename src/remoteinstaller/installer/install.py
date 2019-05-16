@@ -38,27 +38,44 @@ class Installer(object):
                 -o UserKnownHostsFile=/dev/null \
                 -o ServerAliveInterval=60'
 
-    def __init__(self, args):
-        self._yaml_path = args.yaml
+    def __init__(self, callback_server, callback_uuid, yaml, logdir, args=None):
+        self._callback_server = callback_server
+        self._callback_uuid = callback_uuid
+        self._yaml_path = yaml
+        self._uc = self._read_user_config(self._yaml_path)
+        self._logdir = logdir
+
+        self._boot_iso_path = None
+        self._iso_url = None
+        self._callback_url = None
+        self._client_key = None
+        self._client_cert = None
+        self._ca_cert = None
+        self._own_ip = None
+        self._tag = None
+        if args:
+            self._set_arguments(args)
+
+        # TODO
+        self._disable_bmc_initial_reset = False
+        self._disable_other_bmc_reset = True
+
+        self._vip = None
+        self._first_controller = None
+        self._first_controller_ip = None
+        self._first_controller_bmc = None
+
+        self._define_first_controller()
+
+    def _set_arguments(self, args):
         self._boot_iso_path = args.boot_iso
         self._iso_url = args.iso
-        self._logdir = args.logdir
         self._callback_url = args.callback_url
         self._client_key = args.client_key
         self._client_cert = args.client_cert
         self._ca_cert = args.ca_cert
         self._own_ip = args.host_ip
         self._tag = args.tag
-        self._http_port = args.http_port
-
-        # TODO
-        self._disable_bmc_initial_reset = True
-        self._disable_other_bmc_reset = True
-
-        self._uc = self._read_user_config(self._yaml_path)
-        self._vip = None
-        self._first_controller_ip = None
-        self._first_controller_bmc = None
 
     @staticmethod
     def _read_user_config(config_file_path):
@@ -95,22 +112,53 @@ class Installer(object):
 
         self._first_controller_bmc.attach_virtual_cd(self._own_ip, nfs_mount, os.path.basename(patched_iso_filename))
 
-    def _create_cloud_config(self, first_controller):
-        logging.info('Create network config file')
+    def _setup_bmc_for_node(self, hw):
+        bmc_log_path = '{}/{}.log'.format(self._logdir, hw)
 
-        domain = self._uc['hosts'][first_controller].get('network_domain')
+        host = self._uc['hosts'][hw]['hwmgmt']['address']
+        user = self._uc['hosts'][hw]['hwmgmt']['user']
+        passwd = self._uc['hosts'][hw]['hwmgmt']['password']
+
+        try:
+            hw_data = hw_detect.get_hw_data(host, user, passwd, False)
+        except HWException as e:
+            error = "Harware not detected for {}: {}".format(hw, str(e))
+            logging.error(error)
+            raise BMCException(error)
+
+        logging.debug("Hardware belongs to %s product family", (hw_data['product_family']))
+        if 'Unknown' in hw_data['product_family']:
+            error = "Hardware not detected for %s" % hw
+            logging.error(error)
+            raise BMCException(error)
+
+        bmc_mod_name = 'remoteinstaller.installer.bmc_management.{}'.format(hw_data['product_family'].lower())
+        bmc_mod = importlib.import_module(bmc_mod_name)
+        bmc_class = getattr(bmc_mod, hw_data['product_family'])
+        bmc = bmc_class(host, user, passwd, bmc_log_path)
+        bmc.set_host_name(hw)
+
+        return bmc
+
+    def _define_first_controller(self):
+        for hw in sorted(self._uc['hosts']):
+            logging.debug('HW node name is %s', hw)
+
+            if 'controller' in self._uc['hosts'][hw]['service_profiles'] or \
+            'caas_master' in self._uc['hosts'][hw]['service_profiles']:
+                self._first_controller = hw
+                break
+
+        logging.info('First controller is %s', self._first_controller)
+        self._first_controller_bmc = self._setup_bmc_for_node(self._first_controller)
+
+        domain = self._uc['hosts'][self._first_controller].get('network_domain')
         extnet = self._uc['networking']['infra_external']['network_domains'][domain]
 
-        vlan = extnet.get('vlan')
         first_ip = extnet['ip_range_start']
-        gateway = extnet['gateway']
-        dns = self._uc['networking']['dns'][0]
-        cidr = extnet['cidr']
-        prefix = IPNetwork(cidr).prefixlen
-
         self._vip = str(IPAddress(first_ip))
 
-        pre_allocated_ips = self._uc['hosts'][first_controller].get('pre_allocated_ips', None)
+        pre_allocated_ips = self._uc['hosts'][self._first_controller].get('pre_allocated_ips', None)
         if pre_allocated_ips:
             pre_allocated_infra_external_ip = pre_allocated_ips.get('infra_external', None)
             self._first_controller_ip = str(IPAddress(pre_allocated_infra_external_ip))
@@ -118,7 +166,19 @@ class Installer(object):
         if not self._first_controller_ip:
             self._first_controller_ip = str(IPAddress(first_ip)+1)
 
-        controller_network_profile = self._uc['hosts'][first_controller]['network_profiles'][0]
+    def _create_cloud_config(self):
+        logging.info('Create network config file')
+
+        domain = self._uc['hosts'][self._first_controller].get('network_domain')
+        extnet = self._uc['networking']['infra_external']['network_domains'][domain]
+
+        vlan = extnet.get('vlan')
+        gateway = extnet['gateway']
+        dns = self._uc['networking']['dns'][0]
+        cidr = extnet['cidr']
+        prefix = IPNetwork(cidr).prefixlen
+
+        controller_network_profile = self._uc['hosts'][self._first_controller]['network_profiles'][0]
         mappings = self._uc['network_profiles'][controller_network_profile]['interface_net_mapping']
         for interface in mappings:
             if 'infra_external' in mappings[interface]:
@@ -141,7 +201,7 @@ class Installer(object):
         logging.debug('NAMESERVER=%s', dns)
         logging.debug('ISO_URL="%s"', self._iso_url)
 
-        network_config_filename = '{}/network_config'.format(os.getcwd())
+        network_config_filename = '{}/network_config'.format(self._logdir)
         with open(network_config_filename, 'w') as f:
             if vlan:
                 f.write('VLAN={}\n'.format(vlan))
@@ -152,23 +212,16 @@ class Installer(object):
             f.write('\n')
             f.write('ISO_URL="{}"'.format(self._iso_url))
 
+        return network_config_filename
+
+    def _create_callback_file(self):
         logging.debug('CALLBACK_URL="%s"', self._callback_url)
 
-        callback_url_filename = '{}/callback_url'.format(os.getcwd())
+        callback_url_filename = '{}/callback_url'.format(self._logdir)
         with open(callback_url_filename, 'w') as f:
             f.write(self._callback_url)
 
-        if self._client_cert:
-            return [self._yaml_path,
-                    network_config_filename,
-                    callback_url_filename,
-                    self._client_key,
-                    self._client_cert,
-                    self._ca_cert]
-
-        return [self._yaml_path,
-                network_config_filename,
-                callback_url_filename]
+        return callback_url_filename
 
     def _patch_iso(self, iso_target, file_list):
         logging.info('Patch boot ISO')
@@ -188,43 +241,43 @@ class Installer(object):
                                                                       file_name,
                                                                       user,
                                                                       ip,
-                                                                      to_file))
+                                                                      to_file), 'put file')
 
-    def _get_file(self, log_dir, ip, user, passwd, file_name, recursive=False):
+    def _get_file(self, ip, user, passwd, file_name, recursive=False):
         if recursive:
             self._execute_shell('sshpass -p {} scp {} -r {}@{}:{} {}'.format(passwd,
                                                                              Installer.SSH_OPTS,
                                                                              user,
                                                                              ip,
                                                                              file_name,
-                                                                             log_dir))
+                                                                             self._logdir), 'get files')
         else:
             self._execute_shell('sshpass -p {} scp {} {}@{}:{} {}'.format(passwd,
                                                                           Installer.SSH_OPTS,
                                                                           user,
                                                                           ip,
                                                                           file_name,
-                                                                          log_dir))
+                                                                          self._logdir), 'get file')
 
-    def _get_node_logs(self, log_dir, ip, user, passwd):
-        self._get_file(log_dir, ip, user, passwd, '/srv/deployment/log/cm.log')
-        self._get_file(log_dir, ip, user, passwd, '/srv/deployment/log/bootstrap.log')
-        self._get_file(log_dir, ip, user, passwd, '/var/log/ironic', recursive=True)
+    def _get_node_logs(self, ip, user, passwd):
+        self._get_file(ip, user, passwd, '/srv/deployment/log/cm.log')
+        self._get_file(ip, user, passwd, '/srv/deployment/log/bootstrap.log')
+        self._get_file(ip, user, passwd, '/var/log/ironic', recursive=True)
 
-    def _get_journal_logs(self, log_dir, ip, user, passwd):
-        self._put_file(ip, user, passwd, '/opt/remoteinstaller/get_journals.sh')
-        self._put_file(ip, user, passwd, '/opt/remoteinstaller/print_hosts.py')
+    def _get_journal_logs(self, ip, user, passwd):
+        self._put_file(ip, user, passwd, '/opt/scripts/get_journals.sh')
+        self._put_file(ip, user, passwd, '/opt/scripts/print_hosts.py')
 
-        self._execute_shell('sh ./get_journals.sh')
+        self._execute_shell('sh ./get_journals.sh', 'run get_journals.sh')
 
-        self._get_file(log_dir, ip, user, passwd, '/tmp/node_journals.tgz')
+        self._get_file(ip, user, passwd, '/tmp/node_journals.tgz')
 
-    def _get_logs_from_console(self, log_dir, bmc, admin_user, admin_passwd):
+    def _get_logs_from_console(self, bmc, admin_user, admin_passwd):
         bmc_host = bmc.get_host()
         bmc_user = bmc.get_user()
         bmc_passwd = bmc.get_passwd()
 
-        log_file = '{}/cat_bootstrap.log'.format(log_dir)
+        log_file = '{}/cat_bootstrap.log'.format(self._logdir)
         try:
             cat_file = CatFile(bmc_host, bmc_user, bmc_passwd, admin_user, admin_passwd)
             cat_file.cat('/srv/deployment/log/bootstrap.log', log_file)
@@ -234,21 +287,63 @@ class Installer(object):
             cat_file = CatFile(bmc_host, bmc_user, bmc_passwd, 'root', 'root')
             cat_file.cat('/srv/deployment/log/bootstrap.log', log_file)
 
-    def get_logs(self, log_dir, admin_passwd):
+    def get_logs(self, admin_passwd):
         admin_user = self._uc['users']['admin_user_name']
 
-        ssh_command = 'nc -w1 {} 22 </dev/null &> /dev/null'.format(self._first_controller_ip)
-        ssh_responds = self._execute_shell(ssh_command)
+        ssh_check_command = 'nc -w1 {} 22 </dev/null &> /dev/null'.format(self._first_controller_ip)
+        ssh_check_fails = os.system(ssh_check_command)
 
-        if ssh_responds:
-            self._get_node_logs(log_dir, self._first_controller_ip, admin_user, admin_passwd)
+        if not ssh_check_fails:
+            self._get_node_logs(self._first_controller_ip, admin_user, admin_passwd)
 
-            self._get_journal_logs(log_dir, self._first_controller_ip, admin_user, admin_passwd)
+            self._get_journal_logs(self._first_controller_ip, admin_user, admin_passwd)
         else:
-            self._get_logs_from_console(log_dir,
-                                        self._first_controller_bmc,
+            self._get_logs_from_console(self._first_controller_bmc,
                                         admin_user,
                                         admin_passwd)
+
+    def _setup_bmcs(self):
+        other_bmcs = []
+        for hw in sorted(self._uc['hosts']):
+            logging.info('HW node name is %s', hw)
+
+            bmc = self._setup_bmc_for_node(hw)
+            bmc.setup_sol()
+
+            if hw != self._first_controller:
+                other_bmcs.append(bmc)
+                bmc.power('off')
+
+        if not self._disable_bmc_initial_reset:
+            self._first_controller_bmc.reset()
+            time_after_reset = int(time.time())
+
+        if not self._disable_other_bmc_reset:
+            for bmc in other_bmcs:
+                bmc.reset()
+
+        if not self._disable_bmc_initial_reset:
+            # Make sure we sleep at least 6min after the first controller BMC reset
+            sleep_time = 6*60-int(time.time())-time_after_reset
+            if sleep_time > 0:
+                logging.debug('Waiting for first controller BMC to stabilize \
+                               (%s sec) after reset', sleep_time)
+                time.sleep(sleep_time)
+
+    def get_access_info(self):
+        access_info = {'vip': self._vip,
+                       'installer_node_ip': self._first_controller_ip,
+                       'admin_user': self._uc['users']['admin_user_name']}
+
+        return access_info
+
+    def _set_progress(self, description, failed=False):
+        if failed:
+            state = 'failed'
+        else:
+            state = 'ongoing'
+
+        self._callback_server.set_state(self._callback_uuid, state, description)
 
     def install(self):
         try:
@@ -263,85 +358,37 @@ class Installer(object):
             else:
                 self._logdir = '.'
 
-            other_bmcs = []
-            first_controller = None
-            for hw in sorted(self._uc['hosts']):
-                logging.info('HW node name is %s', hw)
+            self._set_progress('Setup BMCs')
+            self._setup_bmcs()
 
-                if not first_controller:
-                    if 'controller' in self._uc['hosts'][hw]['service_profiles'] or \
-                    'caas_master' in self._uc['hosts'][hw]['service_profiles']:
-                        first_controller = hw
-                        logging.info('HW is first controller')
+            self._set_progress('Create config files')
+            network_config_filename = self._create_cloud_config()
+            callback_url_filename = self._create_callback_file()
 
-                host = self._uc['hosts'][hw]['hwmgmt']['address']
-                user = self._uc['hosts'][hw]['hwmgmt']['user']
-                passwd = self._uc['hosts'][hw]['hwmgmt']['password']
+            patch_files = [self._yaml_path,
+                           network_config_filename,
+                           callback_url_filename]
 
-                bmc_log_path = '{}/{}.log'.format(self._logdir, hw)
+            if self._client_cert:
+                patch_files.append(self._client_cert)
+            if self._client_key:
+                patch_files.append(self._client_key)
+            if self._ca_cert:
+                patch_files.append(self._ca_cert)
 
-                try:
-                    hw_data = hw_detect.get_hw_data(host, user, passwd, False)
-                except HWException as e:
-                    error = "Harware not detected for {}: {}".format(hw, str(e))
-                    logging.error(error)
-                    raise BMCException(error)
-
-                logging.info("Hardware belongs to %s product family", (hw_data['product_family']))
-                if 'Unknown' in hw_data['product_family']:
-                    error = "Hardware not detected for %s" % hw
-                    logging.error(error)
-                    raise BMCException(error)
-
-                bmc_mod_name = 'remoteinstaller.installer.bmc_management.{}'.format(hw_data['product_family'].lower())
-                bmc_mod = importlib.import_module(bmc_mod_name)
-                bmc_class = getattr(bmc_mod, hw_data['product_family'])
-                bmc = bmc_class(host, user, passwd, bmc_log_path)
-                bmc.set_host_name(hw)
-
-                bmc.setup_sol()
-
-                if hw != first_controller:
-                    other_bmcs.append(bmc)
-                    bmc.power('off')
-                else:
-                    self._first_controller_bmc = bmc
-
-            logging.debug('First controller: %s', first_controller)
-
-            if not self._disable_bmc_initial_reset:
-                self._first_controller_bmc.reset()
-                time_after_reset = int(time.time())
-
-            if not self._disable_other_bmc_reset:
-                for bmc in other_bmcs:
-                    bmc.reset()
-
-            if not self._disable_bmc_initial_reset:
-                # Make sure we sleep at least 6min after the first controller BMC reset
-                sleep_time = 6*60-int(time.time())-time_after_reset
-                if sleep_time > 0:
-                    logging.debug('Waiting for first controller BMC to stabilize \
-                                   (%s sec) after reset', sleep_time)
-                    time.sleep(sleep_time)
-
-            config_file_names = self._create_cloud_config(first_controller)
-
+            self._set_progress('Setup boot options for virtual media')
             self._first_controller_bmc.setup_boot_options_for_virtual_media()
 
-            self._attach_iso_as_virtual_media(config_file_names)
+            self._set_progress('Attach iso as virtual media')
+            self._attach_iso_as_virtual_media(patch_files)
 
+            self._set_progress('Boot from virtual media')
             self._first_controller_bmc.boot_from_virtual_media()
 
+            self._set_progress('Wait for bootup')
             self._first_controller_bmc.wait_for_bootup()
 
             self._first_controller_bmc.close()
-
-            access_info = {'vip': self._vip,
-                           'installer_node_ip': self._first_controller_ip,
-                           'admin_user': self._uc['users']['admin_user_name']}
-
-            return access_info
         except BMCException as ex:
             logging.error('Installation failed: %s', str(ex))
             raise InstallException(str(ex))
@@ -356,7 +403,7 @@ def main():
                         help='URL to ISO image')
     parser.add_argument('-d', '--debug', action='store_true', required=False,
                         help='Debug level for logging')
-    parser.add_argument('-l', '--logdir', required=False,
+    parser.add_argument('-l', '--logdir', required=True,
                         help='Directory path for log files')
     parser.add_argument('-c', '--callback-url', required=True,
                         help='Callback URL for progress reporting')
@@ -381,7 +428,7 @@ def main():
     logging.basicConfig(stream=sys.stdout, level=log_level)
 
     logging.debug('args: %s', parsed_args)
-    installer = Installer(parsed_args)
+    installer = Installer(parsed_args.yaml, parsed_args.logdir, parsed_args)
 
     installer.install()
 

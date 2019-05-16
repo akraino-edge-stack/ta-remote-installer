@@ -17,6 +17,7 @@ MAINTAINER Ralf Mueller <ralf.1.mueller@nokia.com>
 
 ENV \
 ETC_REMOTE_INST="/etc/remoteinstaller" \
+SCRIPTS_DIR="/opt/scripts" \
 PW="root" \
 API_PORT="15101" \
 API_LISTEN_ADDR="0.0.0.0" \
@@ -50,7 +51,7 @@ RUN yum -y install systemd epel-release; yum clean all \
 && yum install -y iproute wget openssh-server lighttpd nfs-utils \
 python-setuptools python2-eventlet python-routes PyYAML \
 python-netaddr pexpect net-tools tcpdump \
-ipmitool \
+ipmitool openssh-clients sshpass nmap-ncat \
 # mod_ssl \
 && systemctl enable sshd \
 && systemctl enable lighttpd \
@@ -90,7 +91,10 @@ RUN pushd "$INSTALLER_MOUNT" \
 && rm -rf * \
 && popd
 
-RUN mkdir -p "$ETC_REMOTE_INST"
+RUN mkdir -p "$SCRIPTS_DIR" \
+&& mkdir -p "$ETC_REMOTE_INST"
+
+COPY src/scripts/get_journals.sh src/scripts/print_hosts.py "$SCRIPTS_DIR"/
 
 RUN echo '#!/bin/bash' >>$STARTUP \
 && echo 'printenv >/etc/remoteinstaller/environment' >>$STARTUP \

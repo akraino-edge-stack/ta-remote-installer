@@ -36,31 +36,32 @@ class LoggingSSLSocket(ssl.SSLSocket):
         try:
             result = super(LoggingSSLSocket, self).accept(*args, **kwargs)
         except Exception as ex:
-            logging.warn('SSLSocket.accept raised exception: %s', str(ex))
+            logging.warning('SSLSocket.accept raised exception: %s', str(ex))
             raise
         return result
 
 
 class InstallationWorker(Thread):
-    def __init__(self, server, uuid, admin_passwd, logdir, args=None):
+    def __init__(self, server, uuid, admin_passwd, yaml, logdir, args=None):
         super(InstallationWorker, self).__init__(name=uuid)
         self._server = server
         self._uuid = uuid
         self._admin_passwd = admin_passwd
+        self._yaml = yaml
         self._logdir = logdir
         self._args = args
 
     def run(self):
-        access_info = None
+        installer = Installer(self._server, self._uuid, self._yaml, self._logdir, self._args)
+        access_info = installer.get_access_info()
+
         if self._args:
             try:
-                installer = Installer(self._args)
-                #access_info = installer.install()
-
+                installer.install()
                 logging.info('Installation triggered for %s', self._uuid)
             except InstallException as ex:
-                logging.warn('Installation triggering failed for %s: %s', self._uuid, str(ex))
-                self._server.set_state(self._uuid, 'failed', str(ex), 0)
+                logging.warning('Installation triggering failed for %s: %s', self._uuid, str(ex))
+                self._server.set_state(self._uuid, 'failed', str(ex))
                 return
 
         installation_finished = False
@@ -69,15 +70,18 @@ class InstallationWorker(Thread):
             if not state['status'] == 'ongoing':
                 installation_finished = True
             else:
+                logging.info('Installation of %s still ongoing (%s%%): %s',
+                             self._uuid,
+                             state['percentage'],
+                             state['description'])
                 time.sleep(10)
 
         logging.info('Installation finished for %s: %s', self._uuid, state)
-        if access_info:
-            logging.info('Login details for installation %s: %s', self._uuid, str(access_info))
+        logging.info('Login details for installation %s: %s', self._uuid, str(access_info))
 
-        logging.info('Getting logs for installation %s...', uuid)
-        #installer.get_logs(self._logdir, self._admin_passwd)
-        logging.info('Logs retrieved for %s', uuid)
+        logging.info('Getting logs for installation %s...', self._uuid)
+        installer.get_logs(self._admin_passwd)
+        logging.info('Logs retrieved for %s', self._uuid)
 
 class Server(object):
     DEFAULT_PATH = '/opt/remoteinstaller'
@@ -85,10 +89,18 @@ class Server(object):
     ISO_PATH = 'images'
     CERTIFICATE_PATH = 'certificates'
     INSTALLATIONS_PATH = 'installations'
-    #CLOUD_ISO_PATH = '{}/rec.iso'.format(ISO_PATH)
-    BOOT_ISO_PATH = '{}/boot.iso'.format(ISO_PATH)
+    USER_CONFIG_NAME = 'user_config.yaml'
 
-    def __init__(self, host, port, cert=None, key=None, client_cert=None, client_key=None, ca_cert=None, path=None, http_port=None):
+    def __init__(self,
+                 host,
+                 port,
+                 cert=None,
+                 key=None,
+                 client_cert=None,
+                 client_key=None,
+                 ca_cert=None,
+                 path=None,
+                 http_port=None):
         self._host = host
         self._port = port
         self._http_port = http_port
@@ -117,6 +129,16 @@ class Server(object):
 
         return admin_passwd
 
+    def _get_yaml_path_for_cloud(self, cloud_name):
+        yaml = '{}/{}/{}/{}'.format(self._path,
+                                    Server.USER_CONFIG_PATH,
+                                    cloud_name,
+                                    Server.USER_CONFIG_NAME)
+        if not os.path.isfile(yaml):
+            raise ServerError('YAML file {} not found'.format(yaml))
+
+        return yaml
+
     def _load_states(self):
         uuid_list = os.listdir('{}/{}'.format(self._path, Server.INSTALLATIONS_PATH))
         for uuid in uuid_list:
@@ -130,14 +152,17 @@ class Server(object):
                     logdir = '{}/{}/{}'.format(self._path, Server.INSTALLATIONS_PATH, uuid)
                     cloud_name = self._ongoing_installations[uuid]['cloud_name']
                     admin_passwd = self._read_admin_passwd(cloud_name)
-                    worker = InstallationWorker(self, uuid, admin_passwd, logdir)
+                    yaml = self._get_yaml_path_for_cloud(cloud_name)
+                    worker = InstallationWorker(self, uuid, admin_passwd, yaml, logdir)
                     worker.start()
 
-    def _set_state(self, uuid, status, description, percentage, cloud_name=None):
-        self._ongoing_installations[uuid] = {}
+    def _set_state(self, uuid, status, description, percentage=None, cloud_name=None):
+        if not self._ongoing_installations.get(uuid, None):
+            self._ongoing_installations[uuid] = {}
         self._ongoing_installations[uuid]['status'] = status
         self._ongoing_installations[uuid]['description'] = description
-        self._ongoing_installations[uuid]['percentage'] = percentage
+        if percentage is not None:
+            self._ongoing_installations[uuid]['percentage'] = percentage
         if cloud_name:
             self._ongoing_installations[uuid]['cloud_name'] = cloud_name
 
@@ -145,9 +170,9 @@ class Server(object):
         with open(state_file, 'w') as sf:
             sf.write(json.dumps(self._ongoing_installations[uuid]))
 
-    def set_state(self, uuid, status, description, percentage):
-        logging.info('uuid=%s, status=%s, description=%s, percentage=%s',
-                     uuid, status, description, percentage)
+    def set_state(self, uuid, status, description, percentage=None):
+        logging.debug('set_state called for %s: status=%s, description=%s, percentage=%s',
+                      uuid, status, description, percentage)
 
         if not uuid in self._ongoing_installations:
             raise ServerError('Installation id {} not found'.format(uuid))
@@ -158,7 +183,7 @@ class Server(object):
         self._set_state(uuid, status, description, percentage)
 
     def get_state(self, uuid):
-        logging.info('uuid=%s', uuid)
+        logging.debug('get_state called for %s', uuid)
 
         if not uuid in self._ongoing_installations:
             raise ServerError('Installation id {} not found'.format(uuid))
@@ -167,22 +192,22 @@ class Server(object):
                 'description': self._ongoing_installations[uuid]['description'],
                 'percentage': self._ongoing_installations[uuid]['percentage']}
 
-    def start_installation(self, cloud_name, iso):
-        logging.info('start_installation(%s, %s)', cloud_name, iso)
+    def start_installation(self, cloud_name, iso, boot_iso):
+        logging.debug('start_installation called with args: (%s, %s, %s)', cloud_name, iso, boot_iso)
 
         uuid = str(uuid_module.uuid4())
 
         args = argparse.Namespace()
 
-        args.yaml = '{}/{}/{}/user_config.yml'.format(self._path,
-                                                      Server.USER_CONFIG_PATH,
-                                                      cloud_name)
-        if not os.path.isfile(args.yaml):
-            raise ServerError('YAML file {} not found'.format(args.yaml))
+        args.yaml = self._get_yaml_path_for_cloud(cloud_name)
 
         iso_path = '{}/{}/{}'.format(self._path, Server.ISO_PATH, iso)
         if not os.path.isfile(iso_path):
             raise ServerError('ISO file {} not found'.format(iso_path))
+
+        boot_iso_path = '{}/{}/{}'.format(self._path, Server.ISO_PATH, boot_iso)
+        if not os.path.isfile(boot_iso_path):
+            raise ServerError('Provisioning ISO file {} not found'.format(boot_iso_path))
 
         http_port_part = ''
         if self._http_port:
@@ -194,12 +219,12 @@ class Server(object):
 
         os.makedirs(args.logdir)
 
-        args.boot_iso = '{}/{}'.format(self._path, Server.BOOT_ISO_PATH)
+        args.boot_iso = '{}/{}/{}'.format(self._path, Server.ISO_PATH, boot_iso)
 
         args.tag = uuid
-        args.callback_url = 'http://{}:{}/v1/installations/{}/state'.format(self._host,
-                                                                            self._port,
-                                                                            uuid)
+        args.callback_url = 'https://{}:{}/v1/installations/{}/state'.format(self._host,
+                                                                             self._port,
+                                                                             uuid)
 
         args.client_cert = self._client_cert
         args.client_key = self._client_key
@@ -209,7 +234,7 @@ class Server(object):
         self._set_state(uuid, 'ongoing', '', 0, cloud_name)
 
         admin_passwd = self._read_admin_passwd(cloud_name)
-        worker = InstallationWorker(self, uuid, admin_passwd, args.logdir, args)
+        worker = InstallationWorker(self, uuid, admin_passwd, args.yaml, args.logdir, args)
         worker.start()
 
         return uuid
@@ -336,6 +361,7 @@ class WSGIHandler(object):
                 {
                     'cloud-name': <name of the cloud>,
                     'iso': <iso image name>,
+                    'provisioning-iso': <boot iso image name>
                 }
             Response: http status set correctly
                 {
@@ -351,14 +377,14 @@ class WSGIHandler(object):
                 request = json.loads(rpc.req_body)
                 cloud_name = request['cloud-name']
                 iso = request['iso']
+                boot_iso = request['provisioning-iso']
 
-                uuid = self.server.start_installation(cloud_name, iso)
+                uuid = self.server.start_installation(cloud_name, iso, boot_iso)
 
                 rpc.rep_status = HTTPErrors.get_ok_status()
                 reply = {'uuid': uuid}
                 rpc.rep_body = json.dumps(reply)
         except KeyError as ex:
-            rpc.rep_status = HTTPErrors.get_request_not_ok_status()
             raise ServerError('Missing request parameter: {}'.format(str(ex)))
         except Exception as exp:  # pylint: disable=broad-except
             rpc.rep_status = HTTPErrors.get_internal_error_status()
@@ -380,17 +406,13 @@ class WSGIHandler(object):
 
         logging.debug('_get_state called')
         try:
-            if not rpc.req_body:
-                rpc.rep_status = HTTPErrors.get_request_not_ok_status()
-            else:
-                uuid = rpc.req_params['uuid']
+            uuid = rpc.req_params['uuid']
 
-                reply = self.server.get_state(uuid)
+            reply = self.server.get_state(uuid)
 
-                rpc.rep_status = HTTPErrors.get_ok_status()
-                rpc.rep_body = json.dumps(reply)
+            rpc.rep_status = HTTPErrors.get_ok_status()
+            rpc.rep_body = json.dumps(reply)
         except KeyError as ex:
-            rpc.rep_status = HTTPErrors.get_request_not_ok_status()
             raise ServerError('Missing request parameter: {}'.format(str(ex)))
         except Exception as exp:  # pylint: disable=broad-except
             rpc.rep_status = HTTPErrors.get_internal_error_status()
@@ -410,7 +432,7 @@ class WSGIHandler(object):
                 }
         """
 
-        logging.debug('set_state called')
+        logging.debug('_set_state called')
         try:
             if not rpc.req_body:
                 rpc.rep_status = HTTPErrors.get_request_not_ok_status()
@@ -426,8 +448,6 @@ class WSGIHandler(object):
                 rpc.rep_status = HTTPErrors.get_ok_status()
                 reply = {}
                 rpc.rep_body = json.dumps(reply)
-        except ServerError:
-            raise
         except KeyError as ex:
             rpc.rep_status = HTTPErrors.get_request_not_ok_status()
             raise ServerError('Missing request parameter: {}'.format(str(ex)))
@@ -445,7 +465,11 @@ class WSGIHandler(object):
             rpc.req_filter = {}
         rpc.req_content_type = environ['CONTENT_TYPE']
         try:
-            rpc.req_content_size = int(environ['CONTENT_LENGTH'])
+            content_len = environ['CONTENT_LENGTH']
+            if not content_len:
+                rpc.req_content_size = 0
+            else:
+                rpc.req_content_size = int(content_len)
         except KeyError:
             rpc.req_content_size = 0
 
@@ -497,12 +521,12 @@ class WSGIHandler(object):
 
             self._read_body(rpc, environ)
 
-            logging.info('Calling %s with rpc=%s', action, str(rpc))
+            logging.debug('Calling %s with rpc=%s', action, str(rpc))
             actionfunc = getattr(self, action)
             actionfunc(rpc)
         except ServerError as ex:
             rpc.rep_status = HTTPErrors.get_request_not_ok_status()
-            rpc.rep_status += ','
+            rpc.rep_status += ', '
             rpc.rep_status += str(ex)
         except AttributeError:
             rpc.rep_status = HTTPErrors.get_internal_error_status()
@@ -510,10 +534,10 @@ class WSGIHandler(object):
             rpc.rep_status += 'Missing action function'
         except Exception as exp:  # pylint: disable=broad-except
             rpc.rep_status = HTTPErrors.get_internal_error_status()
-            rpc.rep_status += ','
+            rpc.rep_status += ', '
             rpc.rep_status += str(exp)
 
-        logging.info('Replying with rpc=%s', str(rpc))
+        logging.debug('Replying with rpc=%s', str(rpc))
         response_headers = [('Content-type', 'application/json')]
         start_response(rpc.rep_status, response_headers)
         return [rpc.rep_body]
@@ -555,8 +579,8 @@ def main():
     else:
         log_level = logging.INFO
 
-    format = '%(asctime)s %(threadName)s:%(levelname)s %(message)s'
-    logging.basicConfig(stream=sys.stdout, level=log_level, format=format)
+    logformat = '%(asctime)s %(threadName)s:%(levelname)s %(message)s'
+    logging.basicConfig(stream=sys.stdout, level=log_level, format=logformat)
 
     logging.debug('args: %s', args)
 

@@ -34,15 +34,15 @@ error()
 
 help()
 {
-	echo -e "$(basename $0) [-h -a <api-port> -c <cont> -i <image> -r <pw> -s <https-port> ] -b <basedir> -e <ip-addr>"
-	echo -e "   -h  display this help"
-	echo -e "   -a  rest API port, default $API_PORT"
+    echo -e "$(basename $0) [-h -a <api-port> -c <cont> -i <image> -r <pw> -s <https-port> ] -b <basedir> -e <ip-addr>"
+    echo -e "   -h  display this help"
+    echo -e "   -a  rest API port, default $API_PORT"
     echo -e "   -c  container name, default $CONT_NAME"
-	echo -e "   -b  base directory, which contains images, certificates, etc."
-	echo -e "   -e  external ip address of the docker"
-	echo -e "   -i  secure https port, default $IMG_NAME"
-	echo -e "   -p  root password, default $ROOT_PW"
-	echo -e "   -s  secure https port, default $HTTPS_PORT"
+    echo -e "   -b  base directory, which contains images, certificates, etc."
+    echo -e "   -e  external ip address of  the docker"
+    echo -e "   -i  secure https port, default $IMG_NAME"
+    echo -e "   -p  root password, default $ROOT_PW"
+    echo -e "   -s  secure https port, default $HTTPS_PORT"
 }
 
 while getopts "ha:b:e:s:c:p:i:" arg; do
@@ -52,10 +52,10 @@ while getopts "ha:b:e:s:c:p:i:" arg; do
             exit 0
             ;;
         b)
-		    BASE_DIR="$OPTARG"
+            BASE_DIR="$OPTARG"
             ;;
         e)
-		    EXT_IP="$OPTARG"
+            EXT_IP="$OPTARG"
             ;;
         s)
             HTTPS_PORT="$OPTARG"
@@ -68,6 +68,9 @@ while getopts "ha:b:e:s:c:p:i:" arg; do
             ;;
         i)
             IMG_NAME="$OPTARG"
+            ;;
+        p)
+            ROOT_PW="$OPTARG"
             ;;
         *)
             error "Unknow argument!" showhelp

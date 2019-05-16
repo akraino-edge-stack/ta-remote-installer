@@ -1,0 +1,173 @@
+#! /usr/bin/python
+
+# Copyright 2019 Nokia
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import sys
+import argparse
+import requests
+import json
+
+
+class Client(object):
+    DEFAULT_INSTALL_URL = 'http://{}:{}/v1/installations/'
+    DEFAULT_INSTALL_STATE_URL = 'http://{}:{}/v1/installations/{}/state'
+    DEFAULT_PATH = '/opt/remoteinstaller'
+    DEFAULT_PORT = '15101'
+    DEFAULT_HOST = 'localhost'
+
+    def __init__(self):
+        self._verbose = None
+        self._host = Client.DEFAULT_HOST
+        self._port = Client.DEFAULT_PORT
+        self._client_cert_path = None
+        self._client_key_path = None
+        self._user_config = None
+        self._image = None
+        self._request_url = None
+        self._uuid = None
+        self._parser = None
+        self._args = self._parse_args(sys.argv[1:])
+        self._debug(self._args)
+
+    def _parse_args(self, args):
+        parser = argparse.ArgumentParser(description='Remote Installer Client',add_help=False)
+        self._parser = parser
+        subparsers = parser.add_subparsers(dest="subparsers")
+
+        install_parser = subparsers.add_parser('install', description='Remote Installer Client: intall')
+        install_parser.add_argument('--image',
+                            dest='image', required=True,
+                            help='Full path to installation iso image')
+        install_parser.add_argument('--user-config', required=True,
+                            dest='userconfig',
+                            help='Full path to user config')
+        install_parser.set_defaults(func=self._install)
+
+        query_parser = subparsers.add_parser('get-progress', description='Remote Installer Client: get-progress')
+        query_parser.add_argument('--uuid', required=True,
+                            dest='uuid',
+                            help='Installation uuid')
+        query_parser.set_defaults(func=self._query_progress)
+
+        for name, subp in subparsers.choices.items():
+            subp.add_argument('--debug', action='store_true',
+                                required=False, dest='debug', help = "Debug mode")
+
+            subp.add_argument('--host',
+                                dest='host', required=False,
+                                help='Remote installer server address. %s used if not specified.' % Client.DEFAULT_HOST)
+
+            subp.add_argument('--port', required=False,
+                                dest='port',
+                                help='Remote installer server port. %s used if not specified.' % Client.DEFAULT_PORT)
+
+            subp.add_argument('--client-key', required=True,
+                                dest='client_key_path',
+                                help='Full path to client key')
+
+            subp.add_argument('--client-certificate', required=True,
+                                dest='client_cert_path',
+                                help='Full path to client certificate')
+
+            # To be removed before publishing
+            subp.add_argument('--insecure', required=False,
+                                dest='insecure', action='store_true',
+                                help='Allow http insecure connection')
+
+        _args = parser.parse_args(args)
+        return _args
+
+    def _debug(self, message):
+        if self._args.debug:
+            print "DEBUG: {}".format(str(message))
+
+    def _process_args(self, args):
+        if args:
+            if args.client_cert_path:
+                self._client_cert_path = args.client_cert_path
+            if args.client_key_path:
+                self._client_key_path = args.client_key_path
+            if args.port:
+                self._port = args.port
+            if args.host:
+                self._host = args.host
+
+    def run(self):
+        self._process_args(self._args)
+        self._args.func(self._args)
+
+    def _query_progress(self, args):
+        self._debug("get-progress")
+        self._uuid = self._args.uuid
+        self._build_request_url('get-progress')
+        request_data = {'uuid': self._uuid}
+        _response = self._post_request(request_data)
+        self._process_response(_response, request_type='get-progress')
+
+    def _install(self, args):
+        self._debug('install')
+        self._user_config = self._args.userconfig
+        self._image = self._args.image
+        self._build_request_url('install')
+        request_data = {'user-config': self._user_config, 'iso': self._image}
+        _response = self._post_request(request_data)
+        self._process_response(_response, request_type='install')
+
+    def _cert_tuple(self):
+        cert_tuple = None
+        cert_tuple = (self._client_cert_path, self._client_key_path)
+        return None if None in cert_tuple else cert_tuple
+
+    def _build_request_url(self, request_type):
+        if request_type == 'install':
+            self._request_url = Client.DEFAULT_INSTALL_URL.format(self._host, self._port)
+        elif request_type == 'get-progress':
+            self._request_url = Client.DEFAULT_INSTALL_STATE_URL.format(self._host, self._port, self._uuid)
+
+    def _post_request(self, request_data):
+        if self._request_url:
+            response = None
+            cert_tuple = self._cert_tuple() if not self._args.insecure else None
+            try:
+                response = requests.post(self._request_url, json=request_data, cert=cert_tuple)
+                self._debug("post request %s %s %s" % (self._request_url, request_data, cert_tuple))
+            except Exception as ex:
+                self._debug('Failed to send request: {}'.format(str(ex)))
+
+            if response.status_code != requests.codes.ok:
+                self._debug('Failed to send requst: %s (%s)', str(response.reason), str(response.status_code))
+            else:
+                self._debug('response: %s' % response.json())
+                return response.json()
+
+    def _process_response(self, response_content, request_type):
+        _json = response_content
+        if request_type == 'install':
+            _uuid = _json.get('uuid')
+            print "{}".format(_uuid)
+        elif request_type == 'get-progress':
+            for key in ['status', 'description', 'percentage']:
+                print "{}".format(str(_json.get(key)))
+
+def main():
+    try:
+        client = Client()
+        client.run()
+    except Exception as exp:
+        print 'Failed with error: %s', str(exp)
+        return 1
+
+if __name__ == '__main__':
+    sys.exit(main())

@@ -306,6 +306,8 @@ class BMC(object):
                     logging.info('Retry to expect a flag in console, %s seconds remaining', remaining_time)
                     self.close()
 
+        raise BMCException('Expected message in console did not occur in time ({})'.format(flags))
+
     def _wait_for_bios_settings_done(self):
         logging.debug('Wait until BIOS settings are updated')
 
