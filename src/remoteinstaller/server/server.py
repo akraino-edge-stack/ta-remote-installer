@@ -174,7 +174,7 @@ class Server(object):
 
         args = argparse.Namespace()
 
-        args.yaml = '{}/{}/{}/user_config.yml'.format(self._path,
+        args.yaml = '{}/{}/{}/user_config.yaml'.format(self._path,
                                                       Server.USER_CONFIG_PATH,
                                                       cloud_name)
         if not os.path.isfile(args.yaml):
