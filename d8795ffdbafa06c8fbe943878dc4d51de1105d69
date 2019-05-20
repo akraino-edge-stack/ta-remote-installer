@@ -1,0 +1,73 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "2aaf1694_4585b64f",
+        "filename": "work-flow.txt",
+        "patchSetId": 1
+      },
+      "lineNbr": 20,
+      "author": {
+        "id": 217
+      },
+      "writtenOn": "2019-05-20T09:57:30Z",
+      "side": 1,
+      "message": "can you remove whitespace at end of lines 20, 48, 57, 93 and 103.",
+      "range": {
+        "startLine": 20,
+        "startChar": 15,
+        "endLine": 20,
+        "endChar": 25
+      },
+      "revId": "d8795ffdbafa06c8fbe943878dc4d51de1105d69",
+      "serverId": "4cada01b-0314-4fe0-84a1-f9ddc89863f9",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "82c8ab58_0194f2d4",
+        "filename": "work-flow.txt",
+        "patchSetId": 1
+      },
+      "lineNbr": 21,
+      "author": {
+        "id": 217
+      },
+      "writtenOn": "2019-05-20T09:57:30Z",
+      "side": 1,
+      "message": "typo it should be $BASEDIR",
+      "range": {
+        "startLine": 21,
+        "startChar": 10,
+        "endLine": 21,
+        "endChar": 16
+      },
+      "revId": "d8795ffdbafa06c8fbe943878dc4d51de1105d69",
+      "serverId": "4cada01b-0314-4fe0-84a1-f9ddc89863f9",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "7bac2a50_4e4af803",
+        "filename": "work-flow.txt",
+        "patchSetId": 1
+      },
+      "lineNbr": 41,
+      "author": {
+        "id": 217
+      },
+      "writtenOn": "2019-05-20T09:57:30Z",
+      "side": 1,
+      "message": "typo it should be bootcd.iso",
+      "range": {
+        "startLine": 41,
+        "startChar": 35,
+        "endLine": 41,
+        "endChar": 36
+      },
+      "revId": "d8795ffdbafa06c8fbe943878dc4d51de1105d69",
+      "serverId": "4cada01b-0314-4fe0-84a1-f9ddc89863f9",
+      "unresolved": true
+    }
+  ]
+}
