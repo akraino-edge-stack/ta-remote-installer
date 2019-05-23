@@ -14,11 +14,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-hosts=$(python print_hosts.py)
-for host in $hosts; do
+hosts_names_file="$1"
+for host in $(cat ${hosts_names_file}); do
     if [ "${host}" != "$(hostname)" ]; then
-        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ServerAliveInterval=60 ${host} "sudo journalctl" > /tmp/journal_${host}.log
-        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ServerAliveInterval=60 ${host} "sudo journalctl -o json" > /tmp/journal_${host}_json.log
+        address=${host}
+        if [ -e /etc/infra_internal_addresses ]; then
+            internal_ip=$(grep ${host} /etc/infra_internal_addresses | cut -d ' ' -f 2)
+            if [ -n "$internal_ip" ]; then
+                address=${internal_ip}
+            fi
+        fi
+        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ServerAliveInterval=60 ${address} "sudo journalctl" > /tmp/journal_${host}.log
+        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ServerAliveInterval=60 ${address} "sudo journalctl -o json" > /tmp/journal_${host}_json.log
     else
         sudo journalctl > /tmp/journal_${host}.log
         sudo journalctl -o json > /tmp/journal_${host}_json.log

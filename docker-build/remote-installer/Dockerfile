@@ -52,7 +52,7 @@ RUN yum -y install systemd epel-release; yum clean all \
 && yum install -y iproute wget openssh-server lighttpd nfs-utils \
 python-setuptools python2-eventlet python-routes PyYAML \
 python-netaddr pexpect net-tools tcpdump \
-ipmitool openssh-clients sshpass nmap-ncat \
+ipmitool openssh-clients sshpass nmap-ncat python-configparser\
 # mod_ssl \
 && systemctl enable sshd \
 && systemctl enable lighttpd \
@@ -95,7 +95,7 @@ RUN pushd "$INSTALLER_MOUNT" \
 RUN mkdir -p "$SCRIPTS_DIR" \
 && mkdir -p "$ETC_REMOTE_INST"
 
-COPY src/scripts/get_journals.sh src/scripts/print_hosts.py "$SCRIPTS_DIR"/
+COPY src/scripts/get_journals.sh "$SCRIPTS_DIR"/
 
 RUN echo '#!/bin/bash -x' >>$STARTUP \
 && echo "function handle_sigterm() {" >>$STARTUP \

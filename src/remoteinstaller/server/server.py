@@ -14,7 +14,9 @@
 
 import sys
 import argparse
+from configparser import ConfigParser
 import logging
+from logging.handlers import RotatingFileHandler
 import os
 from threading import Thread
 import time
@@ -90,6 +92,7 @@ class Server(object):
     CERTIFICATE_PATH = 'certificates'
     INSTALLATIONS_PATH = 'installations'
     USER_CONFIG_NAME = 'user_config.yaml'
+    EXTRA_CONFIG_NAME = 'installation.ini'
 
     def __init__(self,
                  host,
@@ -125,7 +128,7 @@ class Server(object):
         with open('{}/{}/{}/admin_passwd'.format(self._path,
                                                  Server.USER_CONFIG_PATH,
                                                  cloud_name)) as pwf:
-            admin_passwd = pwf.readline()
+            admin_passwd = pwf.readline().strip()
 
         return admin_passwd
 
@@ -192,12 +195,35 @@ class Server(object):
                 'description': self._ongoing_installations[uuid]['description'],
                 'percentage': self._ongoing_installations[uuid]['percentage']}
 
+    def _read_extra_args(self, cloud_name):
+        extra = {}
+
+        extra_config_filename = '{}/{}/{}/{}'.format(self._path,
+                                    Server.USER_CONFIG_PATH,
+                                    cloud_name,
+                                    Server.EXTRA_CONFIG_NAME)
+
+        if os.path.isfile(extra_config_filename):
+            logging.debug('Read extra installation args from: %s', extra_config_filename)
+            extra_config = ConfigParser()
+            with open(extra_config_filename, 'r') as extra_config_file:
+                extra_config.readfp(extra_config_file)
+
+            if extra_config.has_section('extra'):
+                for key, value in extra_config.items('extra'):
+                    extra[key] = value
+
+        return extra
+
     def start_installation(self, cloud_name, iso, boot_iso):
         logging.debug('start_installation called with args: (%s, %s, %s)', cloud_name, iso, boot_iso)
 
-        uuid = str(uuid_module.uuid4())
+        uuid = str(uuid_module.uuid4())[:8]
 
         args = argparse.Namespace()
+
+        extra_args = self._read_extra_args(cloud_name)
+        vars(args).update(extra_args)
 
         args.yaml = self._get_yaml_path_for_cloud(cloud_name)
 
@@ -441,7 +467,7 @@ class WSGIHandler(object):
                 uuid = rpc.req_params['uuid']
                 status = request['status']
                 description = request['description']
-                percentage = request['percentage']
+                percentage = request.get('percentage', None)
 
                 self.server.set_state(uuid, status, description, percentage)
 
@@ -558,19 +584,23 @@ def wrap_socket(sock, keyfile=None, certfile=None,
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-H', '--host', required=True, help='binding ip of the server')
-    parser.add_argument('-P', '--listen', required=True, help='binding port of the server')
-    parser.add_argument('-S', '--server', required=False, help='externally visible ip of the server')
-    parser.add_argument('-B', '--port', required=False, help='externally visible port of the server')
-    parser.add_argument('-C', '--cert', required=False, help='server cert file name')
-    parser.add_argument('-K', '--key', required=False, help='server private key file name')
-    parser.add_argument('-c', '--client-cert', required=False, help='client cert file name')
-    parser.add_argument('-k', '--client-key', required=False, help='client key file name')
-    parser.add_argument('-A', '--ca-cert', required=False, help='CA cert file name')
-    parser.add_argument('-p', '--path', required=False, help='path for remote installer files')
-    parser.add_argument('-T', '--http-port', required=False, help='port for HTTPD')
-    parser.add_argument('-d', '--debug', required=False, help='Debug level for logging',
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-H', '--host', required=True, metavar='<bind ip>', help='binding ip of the server')
+    parser.add_argument('-P', '--listen', required=True, metavar='<bind port>', help='binding port of the server')
+    parser.add_argument('-S', '--server', required=False, metavar='<external ip>', help='externally visible ip of the server')
+    parser.add_argument('-B', '--port', required=False, metavar='<external port>', help='externally visible port of the server')
+    parser.add_argument('-C', '--cert', required=False, metavar='<server cert file>', help='path to server cert file')
+    parser.add_argument('-K', '--key', required=False, metavar='<server key file>', help='path to server private key file')
+    parser.add_argument('-c', '--client-cert', required=False, metavar='<client cert file>', help='path to client cert file')
+    parser.add_argument('-k', '--client-key', required=False, metavar='<client key file>', help='path to client key file')
+    parser.add_argument('-A', '--ca-cert', required=False, metavar='<CA cert file>', help='path to CA cert file')
+    parser.add_argument('-p', '--path', required=False, metavar='<path to installer files>', help='path to remote installer files')
+    parser.add_argument('-T', '--http-port', required=False, metavar='<HTTPD port>', help='port for HTTPD')
+    parser.add_argument('-d', '--debug', required=False, help='set debug level for logging',
                         action='store_true')
+    parser.add_argument('--log-file', required=False, default='/var/log/remote-installer.log', metavar='<server log file>', help='path to server log file')
+    parser.add_argument('--log-file-max-size', type=int, default=5, required=False, metavar='<max size>', help='server log file max size in MB')
+    parser.add_argument('--log-file-max-count', type=int, default=10, required=False, metavar='<max count>', help='server log file count')
 
     args = parser.parse_args()
 
@@ -582,7 +612,15 @@ def main():
     logformat = '%(asctime)s %(threadName)s:%(levelname)s %(message)s'
     logging.basicConfig(stream=sys.stdout, level=log_level, format=logformat)
 
-    logging.debug('args: %s', args)
+    log_file_handler = RotatingFileHandler(args.log_file,
+                                           maxBytes=(args.log_file_max_size*1024*1024),
+                                           backupCount=args.log_file_max_count)
+    log_file_handler.setFormatter(logging.Formatter(logformat))
+    log_file_handler.setLevel(log_level)
+    logging.getLogger().addHandler(log_file_handler)
+
+    logging.info('remote-installer started')
+    logging.debug('remote-installer args: %s', args)
 
     host = args.server
     if not host:

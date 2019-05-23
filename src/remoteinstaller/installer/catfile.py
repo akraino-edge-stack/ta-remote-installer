@@ -69,7 +69,7 @@ class CatFile(object):
             logging.debug('Command prompt found')
 
             return
-        except pexpect.exceptions.TIMEOUT as e:
+        except pexpect.TIMEOUT as e:
             pass
 
         try:
@@ -88,7 +88,7 @@ class CatFile(object):
             self._sol.sendline()
             self._expect_cmd_prompt()
             logging.debug('Command prompt found')
-        except pexpect.exceptions.TIMEOUT as e:
+        except pexpect.TIMEOUT as e:
             logging.debug(e)
             raise
 

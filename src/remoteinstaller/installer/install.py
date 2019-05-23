@@ -19,6 +19,7 @@ import subprocess
 import os
 import importlib
 import time
+import distutils.util
 
 from yaml import load
 from netaddr import IPNetwork
@@ -34,9 +35,9 @@ class InstallException(Exception):
     pass
 
 class Installer(object):
-    SSH_OPTS = '-o StrictHostKeyChecking=no \
-                -o UserKnownHostsFile=/dev/null \
-                -o ServerAliveInterval=60'
+    SSH_OPTS = ('-o StrictHostKeyChecking=no '
+                '-o UserKnownHostsFile=/dev/null '
+                '-o ServerAliveInterval=60')
 
     def __init__(self, callback_server, callback_uuid, yaml, logdir, args=None):
         self._callback_server = callback_server
@@ -53,12 +54,11 @@ class Installer(object):
         self._ca_cert = None
         self._own_ip = None
         self._tag = None
-        if args:
-            self._set_arguments(args)
-
-        # TODO
         self._disable_bmc_initial_reset = False
         self._disable_other_bmc_reset = True
+
+        if args:
+            self._set_arguments(args)
 
         self._vip = None
         self._first_controller = None
@@ -67,7 +67,25 @@ class Installer(object):
 
         self._define_first_controller()
 
+    def _get_bool_arg(self, args, arg, default):
+        if hasattr(args, arg):
+            arg_value = vars(args)[arg]
+            if not isinstance(arg_value, bool):
+                if isinstance(arg_value, basestring):
+                    try:
+                        arg_value = bool(distutils.util.strtobool(arg_value))
+                        return arg_value
+                    except ValueError:
+                        logging.warning('Invalid value for %s: %s', arg, arg_value)
+            else:
+                return arg_value
+
+        return default
+
     def _set_arguments(self, args):
+        self._disable_bmc_initial_reset = self._get_bool_arg(args, 'disable_bmc_initial_reset', self._disable_bmc_initial_reset)
+        self._disable_other_bmc_reset = self._get_bool_arg(args, 'disable_other_bmc_reset', self._disable_other_bmc_reset)
+
         self._boot_iso_path = args.boot_iso
         self._iso_url = args.iso
         self._callback_url = args.callback_url
@@ -259,16 +277,34 @@ class Installer(object):
                                                                           file_name,
                                                                           self._logdir), 'get file')
 
+    def _run_node_command(self, ip, user, passwd, command):
+        self._execute_shell('sshpass -p {} ssh {} {}@{} {}'.format(passwd,
+                                                                   Installer.SSH_OPTS,
+                                                                   user,
+                                                                   ip,
+                                                                   command), 'run command: {}'.format(command))
+
     def _get_node_logs(self, ip, user, passwd):
         self._get_file(ip, user, passwd, '/srv/deployment/log/cm.log')
         self._get_file(ip, user, passwd, '/srv/deployment/log/bootstrap.log')
         self._get_file(ip, user, passwd, '/var/log/ironic', recursive=True)
 
-    def _get_journal_logs(self, ip, user, passwd):
-        self._put_file(ip, user, passwd, '/opt/scripts/get_journals.sh')
-        self._put_file(ip, user, passwd, '/opt/scripts/print_hosts.py')
+    def _create_hosts_file(self, file_name):
+        with open(file_name, 'w') as hosts_file:
+            for host in self._uc['hosts'].keys():
+                hosts_file.write('{}\n'.format(host))
 
-        self._execute_shell('sh ./get_journals.sh', 'run get_journals.sh')
+    def _get_journal_logs(self, ip, user, passwd):
+        hosts_file_name = 'host_names'
+        hosts_file_path = '{}/{}'.format(self._logdir, hosts_file_name)
+        self._create_hosts_file(hosts_file_name)
+
+        host_list = ' '.join(self._uc['hosts'].keys())
+
+        self._put_file(ip, user, passwd, hosts_file_name)
+        self._put_file(ip, user, passwd, '/opt/scripts/get_journals.sh')
+
+        self._run_node_command(ip, user, passwd, 'sh ./get_journals.sh {}'.format(hosts_file_name))
 
         self._get_file(ip, user, passwd, '/tmp/node_journals.tgz')
 
@@ -387,6 +423,8 @@ class Installer(object):
 
             self._set_progress('Wait for bootup')
             self._first_controller_bmc.wait_for_bootup()
+
+            self._set_progress('Wait deployment start')
 
             self._first_controller_bmc.close()
         except BMCException as ex:
