@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "bf28a01b_9f1e2411",
+        "filename": "docs/api.rst",
+        "patchSetId": 2
+      },
+      "lineNbr": 53,
+      "author": {
+        "id": 195
+      },
+      "writtenOn": "2019-05-24T07:37:05Z",
+      "side": 1,
+      "message": "This should be the the name of the user-config yaml file.",
+      "revId": "a3bb4290344bbac17da56aa05a267f763589a6f3",
+      "serverId": "4cada01b-0314-4fe0-84a1-f9ddc89863f9",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "c8d6859f_c5b90779",
+        "filename": "docs/api.rst",
+        "patchSetId": 2
+      },
+      "lineNbr": 74,
+      "author": {
+        "id": 195
+      },
+      "writtenOn": "2019-05-24T07:37:05Z",
+      "side": 1,
+      "message": "The url should be\nGET /v1/installations/\u003cuuid\u003e/state",
+      "revId": "a3bb4290344bbac17da56aa05a267f763589a6f3",
+      "serverId": "4cada01b-0314-4fe0-84a1-f9ddc89863f9",
+      "unresolved": true
+    }
+  ]
+}
