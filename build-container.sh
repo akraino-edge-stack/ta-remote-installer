@@ -27,7 +27,7 @@ then
     DOCKER_REPO='nexus3.akraino.org:10004'
 fi
 
-cd remote-installer/scripts/
+cd scripts/
 ./build.sh
 docker tag remote-installer:latest ${DOCKER_REPO}/akraino/remote-installer:latest
 docker tag remote-installer:latest ${DOCKER_REPO}/akraino/remote-installer:${VERSION}
