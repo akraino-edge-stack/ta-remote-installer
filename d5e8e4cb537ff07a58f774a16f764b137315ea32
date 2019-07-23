@@ -16,6 +16,24 @@
       "revId": "d5e8e4cb537ff07a58f774a16f764b137315ea32",
       "serverId": "4cada01b-0314-4fe0-84a1-f9ddc89863f9",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "26747124_e5ecd296",
+        "filename": "src/remoteinstaller/installer/install.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 142,
+      "author": {
+        "id": 180
+      },
+      "writtenOn": "2019-07-23T12:55:20Z",
+      "side": 1,
+      "message": "Yep, I\u0027m aware of why the problem happened.  My decision to add the parameter where I did was a considered one — the preceding arguments are all about IPMI, whereas the last argument is not.  I decided that keeping the interface to the function rather clean was worth the risk of breakage for things that didn\u0027t use keyword arguments.  Given nobody complained about the choice there, I took that as approval of the decision.",
+      "parentUuid": "de31f215_490bf762",
+      "revId": "d5e8e4cb537ff07a58f774a16f764b137315ea32",
+      "serverId": "4cada01b-0314-4fe0-84a1-f9ddc89863f9",
+      "unresolved": false
     }
   ]
 }
