@@ -1,0 +1,10 @@
+Code-Review+1: Bela Szanics <bela.szanics@nokia.com>
+Code-Review+1: Robert Eby <re2429@att.com>
+Code-Review+1: Levente Kálé <levente.kale@nokia.com>
+Code-Review+2: Ralf Mueller <ralf.1.mueller@nokia.com>
+Verified+1: Ralf Mueller <ralf.1.mueller@nokia.com>
+Submitted-by: Ralf Mueller <ralf.1.mueller@nokia.com>
+Submitted-at: Tue, 23 Jul 2019 14:40:16 +0000
+Reviewed-on: https://gerrit.akraino.org/r/c/ta/remote-installer/+/1244
+Project: ta/remote-installer
+Branch: refs/heads/master
