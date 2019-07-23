@@ -52,6 +52,24 @@
       "revId": "d5e8e4cb537ff07a58f774a16f764b137315ea32",
       "serverId": "4cada01b-0314-4fe0-84a1-f9ddc89863f9",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "39b121dc_eb5cf9cd",
+        "filename": "src/remoteinstaller/installer/install.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 142,
+      "author": {
+        "id": 180
+      },
+      "writtenOn": "2019-07-23T13:36:46Z",
+      "side": 1,
+      "message": "This change is to fix interaction with the following changes:\n\nhttps://gerrit.akraino.org/r/c/ta/infra-ansible/+/1160\nhttps://gerrit.akraino.org/r/c/ta/cm-plugins/+/1078\nhttps://gerrit.akraino.org/r/c/ta/hw-detector/+/1077\nhttps://gerrit.akraino.org/r/c/ta/config-manager/+/1076\n\n... which have already merged, and these changes, which haven\u0027t:\n\nhttps://gerrit.akraino.org/r/c/ta/config-manager/+/1216\nhttps://gerrit.akraino.org/r/c/ta/cm-plugins/+/1217\n\nTo save you some reading, the use case here is that previously, calls to ipmitool were not passing a privilege level argument.  In that case, ipmitool defaults to a privilege level of ADMINISTRATOR.  However, ADMINISTRATOR privilege is not necessarily required to install the REC — only OPERATOR is necessary.  Some sites (including mine in Bedminster) have IPMI accounts with only OPERATOR privilege due to security requirements.  As such, we need to allow the privilege level to be specified and passed as an argument when invoking ipmitool.\n\nThe aforementioned changes implemented this; however, this call to get_hw_data() was missed (my fault) and is broken as a result.  We need this change in order to make installations actually work again.",
+      "parentUuid": "eee94511_098ce250",
+      "revId": "d5e8e4cb537ff07a58f774a16f764b137315ea32",
+      "serverId": "4cada01b-0314-4fe0-84a1-f9ddc89863f9",
+      "unresolved": false
     }
   ]
 }
