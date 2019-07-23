@@ -136,11 +136,12 @@ class Installer(object):
         host = self._uc['hosts'][hw]['hwmgmt']['address']
         user = self._uc['hosts'][hw]['hwmgmt']['user']
         passwd = self._uc['hosts'][hw]['hwmgmt']['password']
+        priv_level = self._uc['hosts'][hw]['hwmgmt'].get('priv_level', 'ADMINISTRATOR')
 
         try:
-            hw_data = hw_detect.get_hw_data(host, user, passwd, False)
+            hw_data = hw_detect.get_hw_data(host, user, passwd, priv_level, False)
         except HWException as e:
-            error = "Harware not detected for {}: {}".format(hw, str(e))
+            error = "Hardware not detected for {}: {}".format(hw, str(e))
             logging.error(error)
             raise BMCException(error)
 
