@@ -34,6 +34,24 @@
       "revId": "d5e8e4cb537ff07a58f774a16f764b137315ea32",
       "serverId": "4cada01b-0314-4fe0-84a1-f9ddc89863f9",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "eee94511_098ce250",
+        "filename": "src/remoteinstaller/installer/install.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 142,
+      "author": {
+        "id": 205
+      },
+      "writtenOn": "2019-07-23T13:14:02Z",
+      "side": 1,
+      "message": "Hi,\nwhat is the use case for the change? Is there any HW, which needs this change? I think hw_detector is only reading!\nBR\nRalf",
+      "parentUuid": "26747124_e5ecd296",
+      "revId": "d5e8e4cb537ff07a58f774a16f764b137315ea32",
+      "serverId": "4cada01b-0314-4fe0-84a1-f9ddc89863f9",
+      "unresolved": false
     }
   ]
 }
