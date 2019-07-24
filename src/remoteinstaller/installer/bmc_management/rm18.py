@@ -19,8 +19,8 @@ class BMCException(Exception):
     pass
 
 class RM18(OR18):
-    def __init__(self, host, user, passwd, log_path=None):
-        super(RM18, self).__init__(host, user, passwd, log_path)
+    def __init__(self, host, user, passwd, priv_level='ADMINISTRATOR', log_path=None):
+        super(RM18, self).__init__(host, user, passwd, priv_level, log_path)
 
     def _set_boot_from_virtual_media(self):
         logging.debug('Set boot from floppy (%s), and boot after that', self._host)

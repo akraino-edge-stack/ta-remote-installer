@@ -21,10 +21,11 @@ class CatFileException(Exception):
     pass
 
 class CatFile(object):
-    def __init__(self, bmc_host, bmc_user, bmc_password, login_user, login_password):
+    def __init__(self, bmc_host, bmc_user, bmc_password, bmc_priv_level='ADMINISTRATOR', login_user, login_password):
         self._host = bmc_host
         self._user = bmc_user
         self._password = bmc_password
+        self._priv_level = bmc_priv_level
         self._sol = None
 
         self._login_user = login_user
@@ -34,11 +35,11 @@ class CatFile(object):
         logging.info('Open SOL console')
 
         logging.debug('deactivate sol')
-        expect_session = pexpect.spawn('ipmitool -I lanplus -H {} -U {} -P {} sol deactivate'.format(self._host, self._user, self._password))
+        expect_session = pexpect.spawn('ipmitool -I lanplus -H {} -U {} -P {} -L {} sol deactivate'.format(self._host, self._user, self._password, self._priv_level))
         expect_session.expect(pexpect.EOF)
 
         logging.debug('activate sol, output will go to %s', log)
-        self._sol = pexpect.spawn('ipmitool -I lanplus -H {} -U {} -P {} sol activate'.format(self._host, self._user, self._password), timeout=None)
+        self._sol = pexpect.spawn('ipmitool -I lanplus -H {} -U {} -P {} -L {} sol activate'.format(self._host, self._user, self._password, self._priv_level), timeout=None)
         logfile = open(log, 'wb')
         self._sol.logfile_read = logfile
 
@@ -53,7 +54,7 @@ class CatFile(object):
             self._sol.terminate()
 
         logging.debug('deactivate sol')
-        session = pexpect.spawn('ipmitool -I lanplus -H {} -U {} -P {} sol deactivate'.format(self._host, self._user, self._password))
+        session = pexpect.spawn('ipmitool -I lanplus -H {} -U {} -P {} -L {} sol deactivate'.format(self._host, self._user, self._password, self._priv_level))
         session.expect(pexpect.EOF)
 
     def _expect_cmd_prompt(self):
@@ -116,6 +117,7 @@ def main():
     parser.add_argument('-H', '--bmc_host', required=True, help='BMC host')
     parser.add_argument('-U', '--bmc_user', required=True, help='BMC user')
     parser.add_argument('-P', '--bmc_password', required=True, help='BMC user password')
+    parser.add_argument('-L', '--bmc_priv_level', required=False, default='ADMINISTRATOR', help='BMC user privilege level')
     parser.add_argument('-u', '--user', required=True, help='Login user')
     parser.add_argument('-p', '--password', required=True, help='Login user password')
     parser.add_argument('-f', '--file', required=True, help='File path to cat')
@@ -126,7 +128,7 @@ def main():
 
     logging.basicConfig(level=logging.DEBUG)
 
-    cat_file = CatFile(args.bmc_host, args.bmc_user, args.bmc_password, args.user, args.password)
+    cat_file = CatFile(args.bmc_host, args.bmc_user, args.bmc_password, args.user, bmc_priv_level, args.password)
     cat_file.cat(args.file, args.output_file, args.password)
 
 if __name__ == "__main__":

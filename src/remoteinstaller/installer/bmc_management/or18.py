@@ -20,8 +20,8 @@ class BMCException(Exception):
     pass
 
 class OR18(BMC):
-    def __init__(self, host, user, passwd, log_path=None):
-        super(OR18, self).__init__(host, user, passwd, log_path)
+    def __init__(self, host, user, passwd, priv_level='ADMINISTRATOR', log_path=None):
+        super(OR18, self).__init__(host, user, passwd, priv_level, log_path)
 
     def _clear_ris_configuration(self):
         # Clear RIS configuration

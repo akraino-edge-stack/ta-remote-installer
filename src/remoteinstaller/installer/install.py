@@ -154,7 +154,7 @@ class Installer(object):
         bmc_mod_name = 'remoteinstaller.installer.bmc_management.{}'.format(hw_data['product_family'].lower())
         bmc_mod = importlib.import_module(bmc_mod_name)
         bmc_class = getattr(bmc_mod, hw_data['product_family'])
-        bmc = bmc_class(host, user, passwd, bmc_log_path)
+        bmc = bmc_class(host, user, passwd, priv_level, bmc_log_path)
         bmc.set_host_name(hw)
 
         return bmc
@@ -313,15 +313,16 @@ class Installer(object):
         bmc_host = bmc.get_host()
         bmc_user = bmc.get_user()
         bmc_passwd = bmc.get_passwd()
-
+        bmc_priv_level = bmc.get_priv_level()
+        
         log_file = '{}/cat_bootstrap.log'.format(self._logdir)
         try:
-            cat_file = CatFile(bmc_host, bmc_user, bmc_passwd, admin_user, admin_passwd)
+            cat_file = CatFile(bmc_host, bmc_user, bmc_passwd, bmc_priv_level, admin_user, admin_passwd)
             cat_file.cat('/srv/deployment/log/bootstrap.log', log_file)
         except CatFileException as ex:
             logging.info('Could not cat file from console: %s', str(ex))
 
-            cat_file = CatFile(bmc_host, bmc_user, bmc_passwd, 'root', 'root')
+            cat_file = CatFile(bmc_host, bmc_user, bmc_passwd, bmc_priv_level, 'root', 'root')
             cat_file.cat('/srv/deployment/log/bootstrap.log', log_file)
 
     def get_logs(self, admin_passwd):

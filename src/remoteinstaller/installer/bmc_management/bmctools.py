@@ -22,10 +22,11 @@ class BMCException(Exception):
     pass
 
 class BMC(object):
-    def __init__(self, host, user, passwd, log_path=None):
+    def __init__(self, host, user, passwd, priv_level='ADMINISTRATOR', log_path=None):
         self._host = host
         self._user = user
         self._passwd = passwd
+        self._priv_level = priv_level
         if log_path:
             self._log_path = log_path
         else:
@@ -52,6 +53,9 @@ class BMC(object):
     def get_passwd(self):
         return self._passwd
 
+    def get_priv_level(self):
+        return self._priv_level
+    
     def reset(self):
         logging.info('Reset BMC of %s: %s', self.get_host_name(), self.get_host())
 
@@ -208,7 +212,7 @@ class BMC(object):
         return ''.join('{}'.format(c.decode('hex')) for c in hex_string)
 
     def _execute_ipmitool_command(self, ipmi_command):
-        command = 'ipmitool -I lanplus -H {} -U {} -P {} {}'.format(self._host, self._user, self._passwd, ipmi_command)
+        command = 'ipmitool -I lanplus -H {} -U {} -P {} -L {} {}'.format(self._host, self._user, self._passwd, self._priv_level, ipmi_command)
 
         p = subprocess.Popen(command.split(), stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         out, _ = p.communicate()
@@ -257,12 +261,12 @@ class BMC(object):
     def _open_console(self):
         logging.debug('Open SOL console (log in %s)', self._log_path)
 
-        expect_session = pexpect.spawn('ipmitool -I lanplus -H {} -U {} -P {} sol deactivate'.format(self._host, self._user, self._passwd))
+        expect_session = pexpect.spawn('ipmitool -I lanplus -H {} -U {} -P {} -L {} sol deactivate'.format(self._host, self._user, self._passwd, self._priv_level))
         expect_session.expect(pexpect.EOF)
 
         logfile = open(self._log_path, 'ab')
 
-        expect_session = pexpect.spawn('ipmitool -I lanplus -H {} -U {} -P {} sol activate'.format(self._host, self._user, self._passwd), timeout=None, logfile=logfile)
+        expect_session = pexpect.spawn('ipmitool -I lanplus -H {} -U {} -P {} -L {} sol activate'.format(self._host, self._user, self._passwd, self._priv_level), timeout=None, logfile=logfile)
 
         return expect_session
 

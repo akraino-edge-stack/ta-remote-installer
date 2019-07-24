@@ -20,8 +20,8 @@ class BMCException(Exception):
     pass
 
 class HW17(BMC):
-    def __init__(self, host, user, passwd, log_path=None):
-        super(HW17, self).__init__(host, user, passwd, log_path)
+    def __init__(self, host, user, passwd, priv_level='ADMINISTRATOR', log_path=None):
+        super(HW17, self).__init__(host, user, passwd, priv_level, log_path)
 
     def attach_virtual_cd(self, nfs_host, nfs_mount, boot_iso_filename):
         for _ in range(2):
