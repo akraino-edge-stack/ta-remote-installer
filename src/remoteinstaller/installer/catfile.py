@@ -21,7 +21,7 @@ class CatFileException(Exception):
     pass
 
 class CatFile(object):
-    def __init__(self, bmc_host, bmc_user, bmc_password, bmc_priv_level='ADMINISTRATOR', login_user, login_password):
+    def __init__(self, bmc_host, bmc_user, bmc_password, bmc_priv_level, login_user, login_password):
         self._host = bmc_host
         self._user = bmc_user
         self._password = bmc_password
@@ -128,7 +128,7 @@ def main():
 
     logging.basicConfig(level=logging.DEBUG)
 
-    cat_file = CatFile(args.bmc_host, args.bmc_user, args.bmc_password, args.user, bmc_priv_level, args.password)
+    cat_file = CatFile(args.bmc_host, args.bmc_user, args.bmc_password, args.bmc_priv_level, args.user, args.password)
     cat_file.cat(args.file, args.output_file, args.password)
 
 if __name__ == "__main__":
