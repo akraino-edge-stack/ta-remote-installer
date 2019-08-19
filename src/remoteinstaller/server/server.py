@@ -239,7 +239,7 @@ class Server(object):
         if self._http_port:
             http_port_part = ':{}'.format(self._http_port)
 
-        args.iso = 'https://{}{}/{}/{}'.format(self._host, http_port_part, Server.ISO_PATH, iso)
+        args.iso = 'https://{}{}/{}'.format(self._host, http_port_part, iso)
 
         args.logdir = '{}/{}/{}'.format(self._path, Server.INSTALLATIONS_PATH, uuid)
 

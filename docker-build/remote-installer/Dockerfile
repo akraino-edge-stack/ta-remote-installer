@@ -50,7 +50,7 @@ RUN yum -y install systemd epel-release; yum clean all \
 \
 # Services for the workload \
 && yum install -y iproute wget openssh-server lighttpd nfs-utils \
-python-setuptools python2-eventlet python-routes PyYAML \
+python-setuptools python2-eventlet python-routes PyYAML python-requests \
 python-netaddr pexpect net-tools tcpdump \
 ipmitool openssh-clients sshpass nmap-ncat python-configparser\
 # mod_ssl \
@@ -63,15 +63,17 @@ ipmitool openssh-clients sshpass nmap-ncat python-configparser\
 # lighthttpd configuration
 
 RUN sed -i 's/server.use-ipv6 = "enable"/server.use-ipv6 = "disable"/' /etc/lighttpd/lighttpd.conf \
-&& echo $'\n\
-# SSL configuration\n\
-ssl.engine = "enable"\n\
-ssl.privkey = "/opt/remoteinstaller/certificates/serverkey.pem"\n\
-ssl.pemfile = "/opt/remoteinstaller/certificates/servercert.pem"\n\
-ssl.ca-file = "/opt/remoteinstaller/certificates/cacert.pem"\n\
-ssl.verifyclient.activate = "enable"\n\
-ssl.verifyclient.enforce = "enable"\n\
-' >> /etc/lighttpd/lighttpd.conf \
+&& sed -i 's#server.document-root = server_root + "/lighttpd"#server.document-root = server_root + "/lighttpd" + "/images/insecure"#' /etc/lighttpd/lighttpd.conf \
+&& echo >> /etc/lighttpd/lighttpd.conf \
+&& echo '$SERVER["socket"] == ":CHANGE_HTTPS_PORT" {' >> /etc/lighttpd/lighttpd.conf \
+&& echo '  server.document-root = server_root + "/lighttpd" + "/images"' >> /etc/lighttpd/lighttpd.conf \
+&& echo '  ssl.engine = "enable"' >> /etc/lighttpd/lighttpd.conf \
+&& echo '  ssl.privkey = "/opt/remoteinstaller/certificates/serverkey.pem"' >> /etc/lighttpd/lighttpd.conf \
+&& echo '  ssl.pemfile = "/opt/remoteinstaller/certificates/servercert.pem"' >> /etc/lighttpd/lighttpd.conf \
+&& echo '  ssl.ca-file = "/opt/remoteinstaller/certificates/cacert.pem"' >> /etc/lighttpd/lighttpd.conf \
+&& echo '  ssl.verifyclient.activate = "enable"' >> /etc/lighttpd/lighttpd.conf \
+&& echo '  ssl.verifyclient.enforce = "enable"' >> /etc/lighttpd/lighttpd.conf \
+&& echo '}' >> /etc/lighttpd/lighttpd.conf \
 && mkdir -p "$IMAGES_HTML"
 
 
@@ -109,7 +111,7 @@ RUN echo '#!/bin/bash -x' >>$STARTUP \
 && echo 'nohup /usr/lib/systemd/systemd --system' '&>/dev/null &' >>$STARTUP \
 && echo "echo -e \"\$PW\n\$PW\n\n\" |passwd" >>$STARTUP \
 && echo mount -o bind "$IMAGES_STORE" "$IMAGES_HTML" >>$STARTUP \
-&& echo 'sed -i "s/server.port = 80/server.port = $HTTPS_PORT/" /etc/lighttpd/lighttpd.conf' >>$STARTUP \
+&& echo 'sed -i "s/CHANGE_HTTPS_PORT/$HTTPS_PORT/" /etc/lighttpd/lighttpd.conf' >>$STARTUP \
 && echo 'sed -i "s/.*Port 22/Port $SSH_PORT/" /etc/ssh/sshd_config' >>$STARTUP \
 # && echo "echo \\\$SERVER[\\\"sockets\\\"] == \\\"0.0.0.0:\$HTTPS_PORT {}\\\" >> /etc/lighttpd/lighttpd.conf" >>$STARTUP \
 && echo python /lib/python2.7/site-packages/remoteinstaller-1.0-py2.7.egg/remoteinstaller/server/server.py \

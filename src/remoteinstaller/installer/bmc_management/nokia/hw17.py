@@ -12,18 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .bmctools import BMC
 import logging
 import time
 
-class BMCException(Exception):
-    pass
+from ..bmctools import BMCException
+from .nokia import NokiaHW
 
-class HW17(BMC):
+class HW17(NokiaHW):
     def __init__(self, host, user, passwd, priv_level='ADMINISTRATOR', log_path=None):
         super(HW17, self).__init__(host, user, passwd, priv_level, log_path)
 
-    def attach_virtual_cd(self, nfs_host, nfs_mount, boot_iso_filename):
+    def attach_virtual_cd(self, media_info):
+        nfs_host = media_info['server']
+        nfs_mount = media_info['path']
+        boot_iso_filename = media_info['image']
+
         for _ in range(2):
             self._setup_bmc_nfs_service(nfs_host, nfs_mount, boot_iso_filename)
             success = self._wait_for_bmc_nfs_service(90, 'mounted')
@@ -31,7 +34,7 @@ class HW17(BMC):
                 return True
             else:
                 logging.debug('BMC NFS server did not start yet')
-                self.reset()
+                self.reset_bmc()
 
         raise BMCException('NFS service setup failed')
 

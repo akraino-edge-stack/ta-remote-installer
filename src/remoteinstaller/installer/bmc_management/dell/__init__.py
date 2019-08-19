@@ -11,17 +11,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-from .or18 import OR18
-import logging
-
-class BMCException(Exception):
-    pass
-
-class OE19(OR18):
-    def __init__(self, host, user, passwd, priv_level='ADMINISTRATOR', log_path=None):
-        super(OE19, self).__init__(host, user, passwd, priv_level, log_path)
-
-    def _set_boot_from_virtual_media(self):
-        logging.debug('Set boot from floppy (%s), and boot after that', self._host)
-        self._run_ipmitool_command('chassis bootdev floppy options=persistent')

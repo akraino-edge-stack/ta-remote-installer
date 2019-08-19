@@ -12,15 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .or18 import OR18
 import logging
+from .or18 import OR18
 
-class BMCException(Exception):
-    pass
-
-class RM18(OR18):
+class OE19(OR18):
     def __init__(self, host, user, passwd, priv_level='ADMINISTRATOR', log_path=None):
-        super(RM18, self).__init__(host, user, passwd, priv_level, log_path)
+        super(OE19, self).__init__(host, user, passwd, priv_level, log_path)
 
     def _set_boot_from_virtual_media(self):
         logging.debug('Set boot from floppy (%s), and boot after that', self._host)

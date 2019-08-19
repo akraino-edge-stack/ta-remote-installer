@@ -56,6 +56,7 @@ class Installer(object):
         self._tag = None
         self._disable_bmc_initial_reset = False
         self._disable_other_bmc_reset = True
+        self._insecure_boot_image = False
 
         if args:
             self._set_arguments(args)
@@ -85,6 +86,7 @@ class Installer(object):
     def _set_arguments(self, args):
         self._disable_bmc_initial_reset = self._get_bool_arg(args, 'disable_bmc_initial_reset', self._disable_bmc_initial_reset)
         self._disable_other_bmc_reset = self._get_bool_arg(args, 'disable_other_bmc_reset', self._disable_other_bmc_reset)
+        self._insecure_boot_image = self._get_bool_arg(args, 'insecure_boot_image', self._insecure_boot_image)
 
         self._boot_iso_path = args.boot_iso
         self._iso_url = args.iso
@@ -122,13 +124,28 @@ class Installer(object):
     def _attach_iso_as_virtual_media(self, file_list):
         logging.info('Attach ISO as virtual media')
 
-        nfs_mount = os.path.dirname(self._boot_iso_path)
+        iso_path = os.path.dirname(self._boot_iso_path)
         boot_iso_filename = os.path.basename(self._boot_iso_path)
-        patched_iso_filename = '{}/{}_{}'.format(nfs_mount, self._tag, boot_iso_filename)
+        if self._insecure_boot_image:
+            insecure_image_path = '{}/insecure'.format(iso_path)
+            if not os.path.exists(insecure_image_path):
+                os.makedirs(insecure_image_path)
+
+            patched_iso_filename = '{}/{}_{}'.format(insecure_image_path, self._tag, boot_iso_filename)
+        else:
+            patched_iso_filename = '{}/{}_{}'.format(iso_path, self._tag, boot_iso_filename)
 
         self._patch_iso(patched_iso_filename, file_list)
 
-        self._first_controller_bmc.attach_virtual_cd(self._own_ip, nfs_mount, os.path.basename(patched_iso_filename))
+        media_info = {}
+        media_info['server'] = self._own_ip
+        media_info['path'] = iso_path
+        media_info['image'] = os.path.basename(patched_iso_filename)
+        if self._insecure_boot_image:
+            media_info['insecure_boot_image'] = True
+        self._first_controller_bmc.attach_virtual_cd(media_info)
+
+        return patched_iso_filename
 
     def _setup_bmc_for_node(self, hw):
         bmc_log_path = '{}/{}.log'.format(self._logdir, hw)
@@ -151,7 +168,8 @@ class Installer(object):
             logging.error(error)
             raise BMCException(error)
 
-        bmc_mod_name = 'remoteinstaller.installer.bmc_management.{}'.format(hw_data['product_family'].lower())
+        vendor = hw_data.get('vendor').lower()
+        bmc_mod_name = 'remoteinstaller.installer.bmc_management.{}.{}'.format(vendor, hw_data['product_family'].lower())
         bmc_mod = importlib.import_module(bmc_mod_name)
         bmc_class = getattr(bmc_mod, hw_data['product_family'])
         bmc = bmc_class(host, user, passwd, priv_level, bmc_log_path)
@@ -354,12 +372,12 @@ class Installer(object):
                 bmc.power('off')
 
         if not self._disable_bmc_initial_reset:
-            self._first_controller_bmc.reset()
+            self._first_controller_bmc.reset_bmc()
             time_after_reset = int(time.time())
 
         if not self._disable_other_bmc_reset:
             for bmc in other_bmcs:
-                bmc.reset()
+                bmc.reset_bmc()
 
         if not self._disable_bmc_initial_reset:
             # Make sure we sleep at least 6min after the first controller BMC reset
@@ -385,6 +403,7 @@ class Installer(object):
         self._callback_server.set_state(self._callback_uuid, state, description)
 
     def install(self):
+        patched_image_path = None
         try:
             logging.info('Start install')
 
@@ -419,7 +438,7 @@ class Installer(object):
             self._first_controller_bmc.setup_boot_options_for_virtual_media()
 
             self._set_progress('Attach iso as virtual media')
-            self._attach_iso_as_virtual_media(patch_files)
+            patched_image_path = self._attach_iso_as_virtual_media(patch_files)
 
             self._set_progress('Boot from virtual media')
             self._first_controller_bmc.boot_from_virtual_media()
@@ -433,6 +452,9 @@ class Installer(object):
         except BMCException as ex:
             logging.error('Installation failed: %s', str(ex))
             raise InstallException(str(ex))
+        finally:
+            if patched_image_path:
+                os.remove(patched_image_path)
 
 def main():
     parser = argparse.ArgumentParser()

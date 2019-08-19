@@ -14,12 +14,11 @@
 
 import logging
 import time
-from .bmctools import BMC
 
-class BMCException(Exception):
-    pass
+from ..bmctools import BMCException
+from .nokia import NokiaHW
 
-class OR18(BMC):
+class OR18(NokiaHW):
     def __init__(self, host, user, passwd, priv_level='ADMINISTRATOR', log_path=None):
         super(OR18, self).__init__(host, user, passwd, priv_level, log_path)
 
@@ -342,7 +341,11 @@ class OR18(BMC):
         if not self._set_virtual_media_device_count('CD', 1):
             BMCException('Failed to set virtual media device count for CD')
 
-    def attach_virtual_cd(self, nfs_host, nfs_mount, boot_iso_filename):
+    def attach_virtual_cd(self, media_info):
+        nfs_host = media_info['server']
+        nfs_mount = media_info['path']
+        boot_iso_filename = media_info['image']
+
         # Detach first
         self._detach_virtual_media()
 

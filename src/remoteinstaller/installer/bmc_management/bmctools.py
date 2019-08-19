@@ -56,14 +56,8 @@ class BMC(object):
     def get_priv_level(self):
         return self._priv_level
     
-    def reset(self):
-        logging.info('Reset BMC of %s: %s', self.get_host_name(), self.get_host())
-
-        self._run_ipmitool_command('bmc reset cold')
-
-        success = self._wait_for_bmc_reset(180)
-        if not success:
-            raise BMCException('BMC reset failed, BMC did not come up')
+    def attach_virtual_cd(self, media_info):
+        raise NotImplementedError
 
     def _set_boot_from_virtual_media(self):
         raise NotImplementedError
@@ -71,8 +65,14 @@ class BMC(object):
     def _detach_virtual_media(self):
         raise NotImplementedError
 
-    def _get_bmc_nfs_service_status(self):
-        raise NotImplementedError
+    def reset_bmc(self, timeout=180):
+        logging.info('Reset BMC of %s: %s', self.get_host_name(), self.get_host())
+
+        self._run_ipmitool_command('bmc reset cold')
+
+        success = self._wait_for_bmc_reset(timeout)
+        if not success:
+            raise BMCException('BMC reset failed, BMC did not come up')
 
     def _wait_for_bmc_responding(self, timeout, expected_to_respond=True):
         if expected_to_respond:
@@ -165,6 +165,12 @@ class BMC(object):
 
     def power(self, power_command):
         logging.debug('Run host power command (%s) %s', self._host, power_command)
+
+        if power_command == 'on' or power_command == 'off':
+            old_status = self.power('status')
+            if old_status == 'Chassis Power is {}'.format(power_command):
+                logging.debug('Power is already %s', power_command)
+                return
 
         return self._run_ipmitool_command('power {}'.format(power_command)).strip()
 
@@ -329,27 +335,6 @@ class BMC(object):
                                       'Installing OS to HDD',
                                       'Extending partition and filesystem size'],
                                      timeout=1200)
-
-    def _wait_for_bmc_nfs_service(self, timeout, expected_status):
-        logging.debug('Wait for BMC NFS service')
-
-        start_time = int(time.time()*1000)
-
-        status = ''
-        while status != expected_status:
-            status = self._get_bmc_nfs_service_status()
-
-            if status == expected_status or status == 'nfserror':
-                logging.debug('Breaking from wait loop. status = %s', status)
-                break
-
-            time_now = int(time.time()*1000)
-            if time_now-start_time > timeout*1000:
-                logging.debug('Wait timed out')
-                break
-            time.sleep(10)
-
-        return status == expected_status
 
     def _trigger_boot(self):
         logging.debug('Trigger boot')
