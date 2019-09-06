@@ -180,7 +180,8 @@ class Installer(object):
         pre_allocated_ips = self._uc['hosts'][self._first_controller].get('pre_allocated_ips', None)
         if pre_allocated_ips:
             pre_allocated_infra_external_ip = pre_allocated_ips.get('infra_external', None)
-            self._first_controller_ip = str(IPAddress(pre_allocated_infra_external_ip))
+            if pre_allocated_infra_external_ip:
+                self._first_controller_ip = str(IPAddress(pre_allocated_infra_external_ip))
 
         if not self._first_controller_ip:
             self._first_controller_ip = str(IPAddress(first_ip)+1)
