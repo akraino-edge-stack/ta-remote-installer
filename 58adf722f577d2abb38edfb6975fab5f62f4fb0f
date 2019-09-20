@@ -1,0 +1,101 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "93186e1b_ea910eeb",
+        "filename": "docker-build/remote-installer/Dockerfile",
+        "patchSetId": 1
+      },
+      "lineNbr": 66,
+      "author": {
+        "id": 43
+      },
+      "writtenOn": "2019-09-20T12:07:20Z",
+      "side": 1,
+      "message": "What does \"insecure\" signify in this context?",
+      "range": {
+        "startLine": 66,
+        "startChar": 122,
+        "endLine": 66,
+        "endChar": 130
+      },
+      "revId": "58adf722f577d2abb38edfb6975fab5f62f4fb0f",
+      "serverId": "4cada01b-0314-4fe0-84a1-f9ddc89863f9",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ada38c0e_ee17eea3",
+        "filename": "src/remoteinstaller/installer/bmc_management/bmctools.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 59,
+      "author": {
+        "id": 43
+      },
+      "writtenOn": "2019-09-20T12:07:20Z",
+      "side": 1,
+      "message": "The diff would look cleaner if lines 68-75 were up here. I think you\u0027re just renaming reset to reset_bmc, but by moving the function it makes it look like a bigger diff.",
+      "revId": "58adf722f577d2abb38edfb6975fab5f62f4fb0f",
+      "serverId": "4cada01b-0314-4fe0-84a1-f9ddc89863f9",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "0f41b83e_b6846683",
+        "filename": "src/remoteinstaller/installer/bmc_management/nokia/nokia.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 15,
+      "author": {
+        "id": 43
+      },
+      "writtenOn": "2019-09-20T12:07:20Z",
+      "side": 1,
+      "message": "Unused import. I\u0027m assuming you\u0027ll use it in a future commit. I\u0027d suggest waiting until that future commit to add it.",
+      "revId": "58adf722f577d2abb38edfb6975fab5f62f4fb0f",
+      "serverId": "4cada01b-0314-4fe0-84a1-f9ddc89863f9",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "69fee1e6_d6f71757",
+        "filename": "src/remoteinstaller/installer/bmc_management/nokia/nokia.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 19,
+      "author": {
+        "id": 43
+      },
+      "writtenOn": "2019-09-20T12:07:20Z",
+      "side": 1,
+      "message": "Unused imports. I\u0027m assuming you\u0027ll use it in a future commit. I\u0027d suggest waiting until that future commit to add it.",
+      "range": {
+        "startLine": 18,
+        "startChar": 0,
+        "endLine": 19,
+        "endChar": 14
+      },
+      "revId": "58adf722f577d2abb38edfb6975fab5f62f4fb0f",
+      "serverId": "4cada01b-0314-4fe0-84a1-f9ddc89863f9",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "c86071fc_54e8576d",
+        "filename": "src/remoteinstaller/installer/install.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 43
+      },
+      "writtenOn": "2019-09-20T12:07:20Z",
+      "side": 1,
+      "message": "Can you provide some context on what the implications of \"insecure\" are?",
+      "revId": "58adf722f577d2abb38edfb6975fab5f62f4fb0f",
+      "serverId": "4cada01b-0314-4fe0-84a1-f9ddc89863f9",
+      "unresolved": false
+    }
+  ]
+}
