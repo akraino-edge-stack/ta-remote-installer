@@ -19,9 +19,9 @@ TAR_IMAGE="remote-installer.tar"
 
 help()
 {
-	echo -e "$(basename $0) [-hs]"
-	echo -e "   -h  display this help"
-	echo -e "   -s  save image as tar to $TAR_IMAGE"
+    echo -e "$(basename $0) [-hs]"
+    echo -e "   -h  display this help"
+    echo -e "   -s  save image as tar to $TAR_IMAGE"
     echo
     echo -e "Proxy configuration is taken from environment variables"
     echo -e "http_proxy, https_proxy and no_proxy"
@@ -31,15 +31,24 @@ while getopts "hs" arg; do
     case $arg in
         h)
             help
-			exit 0
+            exit 0
             ;;
         s)
-		    SAVE_IMAGE="yes"
+            SAVE_IMAGE="yes"
             ;;
   esac
 done
 
+DOCKERFILE='docker-build/remote-installer/Dockerfile'
+
+# For aarch64 use the closest available upstream version
+if [ "$(uname -m)" = "aarch64" ]; then
+    sed -i ${DOCKERFILE} \
+        -e 's/centos:7.6.1810/centos@sha256:df89b0a0b42916b5b31b334fd52d3e396c226ad97dfe772848bdd6b00fb42bf0/g'
+fi
+
 docker build \
+  --network=host \
   --no-cache \
   --force-rm \
   --build-arg HTTP_PROXY="${http_proxy}" \
@@ -49,7 +58,7 @@ docker build \
   --build-arg https_proxy="${https_proxy}" \
   --build-arg no_proxy="${no_proxy}" \
   --tag remote-installer \
-  --file docker-build/remote-installer/Dockerfile .
+  --file ${DOCKERFILE} .
 
 
 # could be compressed but it's only used until there is an registry
