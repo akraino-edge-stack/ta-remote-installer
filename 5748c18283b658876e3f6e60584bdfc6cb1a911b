@@ -1,0 +1,50 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "de86d86c_c37f3f05",
+        "filename": "scripts/build.sh",
+        "patchSetId": 1
+      },
+      "lineNbr": 47,
+      "author": {
+        "id": 137
+      },
+      "writtenOn": "2020-01-14T14:47:03Z",
+      "side": 1,
+      "message": "I would create some variables for these 2 magic version strings, so they stand out for later editing.",
+      "range": {
+        "startLine": 47,
+        "startChar": 14,
+        "endLine": 47,
+        "endChar": 108
+      },
+      "revId": "5748c18283b658876e3f6e60584bdfc6cb1a911b",
+      "serverId": "4cada01b-0314-4fe0-84a1-f9ddc89863f9",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "4ce95083_0e1019fd",
+        "filename": "scripts/build.sh",
+        "patchSetId": 1
+      },
+      "lineNbr": 61,
+      "author": {
+        "id": 137
+      },
+      "writtenOn": "2020-01-14T14:47:03Z",
+      "side": 1,
+      "message": "shellcheck would recommend quoting this just to be extra-cautious",
+      "range": {
+        "startLine": 61,
+        "startChar": 9,
+        "endLine": 61,
+        "endChar": 22
+      },
+      "revId": "5748c18283b658876e3f6e60584bdfc6cb1a911b",
+      "serverId": "4cada01b-0314-4fe0-84a1-f9ddc89863f9",
+      "unresolved": true
+    }
+  ]
+}
