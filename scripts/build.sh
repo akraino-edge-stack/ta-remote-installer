@@ -16,32 +16,39 @@
 cd "$(dirname "$0")"/..
 
 TAR_IMAGE="remote-installer.tar"
+DOCKERFILE='docker-build/remote-installer/Dockerfile'
 
 help()
 {
-	echo -e "$(basename $0) [-hs]"
-	echo -e "   -h  display this help"
-	echo -e "   -s  save image as tar to $TAR_IMAGE"
+    echo -e "$(basename "$0") [-hs] -t <tag>"
+    echo -e "   -h        display this help"
+    echo -e "   -s        save image as tar to $TAR_IMAGE"
+    echo -e "   -t <tag>  specify docker base image tag"
     echo
     echo -e "Proxy configuration is taken from environment variables"
     echo -e "http_proxy, https_proxy and no_proxy"
 }
 
-while getopts "hs" arg; do
+while getopts "hst:" arg; do
     case $arg in
         h)
             help
-			exit 0
+            exit 0
             ;;
         s)
-		    SAVE_IMAGE="yes"
+            SAVE_IMAGE="yes"
+            ;;
+        t)
+            BASEIMAGE_TAG="$OPTARG"
             ;;
   esac
 done
 
 docker build \
+  --network=host \
   --no-cache \
   --force-rm \
+  --build-arg BASEIMAGE_TAG="${BASEIMAGE_TAG}" \
   --build-arg HTTP_PROXY="${http_proxy}" \
   --build-arg HTTPS_PROXY="${https_proxy}" \
   --build-arg NO_PROXY="${no_proxy}" \
@@ -49,7 +56,7 @@ docker build \
   --build-arg https_proxy="${https_proxy}" \
   --build-arg no_proxy="${no_proxy}" \
   --tag remote-installer \
-  --file docker-build/remote-installer/Dockerfile .
+  --file "${DOCKERFILE}" .
 
 
 # could be compressed but it's only used until there is an registry

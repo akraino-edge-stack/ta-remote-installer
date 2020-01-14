@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM centos:7.6.1810
+ARG BASEIMAGE_TAG
+
+FROM "${BASEIMAGE_TAG}"
 MAINTAINER Ralf Mueller <ralf.1.mueller@nokia.com>
 
 ENV \

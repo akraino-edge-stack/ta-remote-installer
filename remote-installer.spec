@@ -14,14 +14,13 @@
 
 Name:           remote-installer
 Version:        %{_version}
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Contains components for the remote-installer
 Group:          %{_platform_group}
 License:        %{_platform_licence}
 Source0:        %{name}-%{version}.tar.gz
 Vendor:         %{_platform_vendor}
-
-BuildArch:      noarch
+BuildArch:      %{_arch}
 
 # BuildRequires:  docker
 
@@ -31,18 +30,14 @@ Contains components for the remote-installer
 %prep
 
 %build
-docker build \
-  --network=host \
-  --no-cache \
-  --force-rm \
-  --build-arg HTTP_PROXY="${http_proxy}" \
-  --build-arg HTTPS_PROXY="${https_proxy}" \
-  --build-arg NO_PROXY="${no_proxy}" \
-  --build-arg http_proxy="${http_proxy}" \
-  --build-arg https_proxy="${https_proxy}" \
-  --build-arg no_proxy="${no_proxy}" \
-  --tag remote-installer \
-  --file docker-build/remote-installer/Dockerfile .
+BASEIMAGE_TAG='centos:7.6.1810'
+
+# For aarch64 use the closest available upstream version
+if [ "%{_arch}" = "aarch64" ]; then
+    BASEIMAGE_TAG='centos@sha256:df89b0a0b42916b5b31b334fd52d3e396c226ad97dfe772848bdd6b00fb42bf0'
+fi
+
+scripts/build.sh -t "${BASEIMAGE_TAG}"
 
 # Here hould be some registry but it should be handled by a Jenkis job
 docker image save remote-installer >remote-installer-image.tar
