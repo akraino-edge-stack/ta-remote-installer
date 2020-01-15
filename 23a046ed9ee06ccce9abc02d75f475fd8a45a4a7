@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "3fd6f212_ac30f7bf",
+        "filename": "scripts/build.sh",
+        "patchSetId": 3
+      },
+      "lineNbr": 49,
+      "author": {
+        "id": 150
+      },
+      "writtenOn": "2020-01-15T16:14:48Z",
+      "side": 1,
+      "message": "How will this change be impacted if the centos version will be changed in Dockerfile? Do we have any mechanism to make sure the centos versions remain in sync on x86 and aarch64?",
+      "range": {
+        "startLine": 49,
+        "startChar": 4,
+        "endLine": 49,
+        "endChar": 65
+      },
+      "revId": "23a046ed9ee06ccce9abc02d75f475fd8a45a4a7",
+      "serverId": "4cada01b-0314-4fe0-84a1-f9ddc89863f9",
+      "unresolved": true
+    }
+  ]
+}
