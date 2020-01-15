@@ -22,6 +22,30 @@
       "revId": "23a046ed9ee06ccce9abc02d75f475fd8a45a4a7",
       "serverId": "4cada01b-0314-4fe0-84a1-f9ddc89863f9",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "d2f4e7d2_d0e0f040",
+        "filename": "scripts/build.sh",
+        "patchSetId": 3
+      },
+      "lineNbr": 49,
+      "author": {
+        "id": 251
+      },
+      "writtenOn": "2020-01-15T16:21:49Z",
+      "side": 1,
+      "message": "It will either fail fast if there will not be a corresponding centos aarch64 tag or it will be silently ignored if at some point there will be a corresponding aarch64 tag.",
+      "parentUuid": "3fd6f212_ac30f7bf",
+      "range": {
+        "startLine": 49,
+        "startChar": 4,
+        "endLine": 49,
+        "endChar": 65
+      },
+      "revId": "23a046ed9ee06ccce9abc02d75f475fd8a45a4a7",
+      "serverId": "4cada01b-0314-4fe0-84a1-f9ddc89863f9",
+      "unresolved": true
     }
   ]
 }
