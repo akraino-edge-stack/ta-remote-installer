@@ -14,7 +14,7 @@
 
 Name:           remote-installer
 Version:        %{_version}
-Release:        4%{?dist}
+Release:        5%{?dist}
 Summary:        Contains components for the remote-installer
 Group:          %{_platform_group}
 License:        %{_platform_licence}
