@@ -201,15 +201,13 @@ class BMC(object):
 
     @staticmethod
     def _convert_to_hex(ascii_string, padding=False, length=0):
-        hex_value = ''.join('0x{} '.format(c.encode('hex')) for c in ascii_string).strip()
-        if padding and (len(ascii_string) < length):
-            hex_value += ''.join(' 0x00' for _ in range(len(ascii_string), length))
-
-        return hex_value
+        if padding:
+            ascii_string = ascii_string.ljust(length, '\0')
+        return ' '.join('0x{}'.format(c.encode('hex')) for c in ascii_string)
 
     @staticmethod
     def _convert_to_ascii(hex_string):
-        return ''.join('{}'.format(c.decode('hex')) for c in hex_string)
+        return hex_string.replace('0x','').replace(' ','').decode('hex')
 
     def _execute_ipmitool_command(self, ipmi_command):
         command = 'ipmitool -I lanplus -H {} -U {} -P {} -L {} {}'.format(self._host, self._user, self._passwd, self._priv_level, ipmi_command)
