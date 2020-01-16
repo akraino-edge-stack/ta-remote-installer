@@ -19,6 +19,24 @@
     },
     {
       "key": {
+        "uuid": "7201fbfc_efab1e69",
+        "filename": "src/remoteinstaller/installer/bmc_management/falcon.py",
+        "patchSetId": 4
+      },
+      "lineNbr": 84,
+      "author": {
+        "id": 251
+      },
+      "writtenOn": "2020-01-16T13:26:25Z",
+      "side": 1,
+      "message": "The Ampere Falcon BMC is also based on OpenBMC and does not support HTTPS yet.",
+      "parentUuid": "8f076836_a4de6d12",
+      "revId": "69a5821c26556469cf2dbd80f910676f398eb8b6",
+      "serverId": "4cada01b-0314-4fe0-84a1-f9ddc89863f9",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "653586ff_b04df127",
         "filename": "src/remoteinstaller/installer/bmc_management/falcon.py",
         "patchSetId": 4
@@ -42,6 +60,30 @@
     },
     {
       "key": {
+        "uuid": "e82dd823_1cf3683f",
+        "filename": "src/remoteinstaller/installer/bmc_management/falcon.py",
+        "patchSetId": 4
+      },
+      "lineNbr": 126,
+      "author": {
+        "id": 251
+      },
+      "writtenOn": "2020-01-16T13:26:25Z",
+      "side": 1,
+      "message": "Ack",
+      "parentUuid": "653586ff_b04df127",
+      "range": {
+        "startLine": 126,
+        "startChar": 36,
+        "endLine": 126,
+        "endChar": 39
+      },
+      "revId": "69a5821c26556469cf2dbd80f910676f398eb8b6",
+      "serverId": "4cada01b-0314-4fe0-84a1-f9ddc89863f9",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "2cf6d5df_3770a93f",
         "filename": "src/remoteinstaller/installer/bmc_management/falcon.py",
         "patchSetId": 4
@@ -53,6 +95,24 @@
       "writtenOn": "2020-01-16T12:41:35Z",
       "side": 1,
       "message": "I don\u0027t think I\u0027ve ever seen this python syntax before. Is this idiom common? I think this is an unclear way of structuring it.",
+      "revId": "69a5821c26556469cf2dbd80f910676f398eb8b6",
+      "serverId": "4cada01b-0314-4fe0-84a1-f9ddc89863f9",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "2afba83d_f15db955",
+        "filename": "src/remoteinstaller/installer/bmc_management/falcon.py",
+        "patchSetId": 4
+      },
+      "lineNbr": 239,
+      "author": {
+        "id": 251
+      },
+      "writtenOn": "2020-01-16T13:26:25Z",
+      "side": 1,
+      "message": "Ack",
+      "parentUuid": "2cf6d5df_3770a93f",
       "revId": "69a5821c26556469cf2dbd80f910676f398eb8b6",
       "serverId": "4cada01b-0314-4fe0-84a1-f9ddc89863f9",
       "unresolved": false
