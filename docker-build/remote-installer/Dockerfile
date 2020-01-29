@@ -14,7 +14,7 @@
 
 ARG BASEIMAGE_TAG
 
-FROM "${BASEIMAGE_TAG}"
+FROM $BASEIMAGE_TAG
 MAINTAINER Ralf Mueller <ralf.1.mueller@nokia.com>
 
 ENV \
