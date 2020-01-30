@@ -1,5 +1,6 @@
 #!/bin/bash
 # Copyright 2019 Nokia
+# Copyright 2020 ENEA
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,18 +19,25 @@ cd "$(dirname "$0")"/..
 TAR_IMAGE="remote-installer.tar"
 DOCKERFILE='docker-build/remote-installer/Dockerfile'
 
+BASEIMAGE_TAG='centos:7.6.1810'
+
+# For aarch64 use the closest available upstream version
+if [ "$(uname -m)" = "aarch64" ]; then
+    BASEIMAGE_TAG='centos@sha256:df89b0a0b42916b5b31b334fd52d3e396c226ad97dfe772848bdd6b00fb42bf0'
+fi
+
+
 help()
 {
-    echo -e "$(basename "$0") [-hs] -t <tag>"
+    echo -e "$(basename "$0") [-hs]"
     echo -e "   -h        display this help"
     echo -e "   -s        save image as tar to $TAR_IMAGE"
-    echo -e "   -t <tag>  specify docker base image tag"
     echo
     echo -e "Proxy configuration is taken from environment variables"
     echo -e "http_proxy, https_proxy and no_proxy"
 }
 
-while getopts "hst:" arg; do
+while getopts "hs" arg; do
     case $arg in
         h)
             help
@@ -37,9 +45,6 @@ while getopts "hst:" arg; do
             ;;
         s)
             SAVE_IMAGE="yes"
-            ;;
-        t)
-            BASEIMAGE_TAG="$OPTARG"
             ;;
   esac
 done
