@@ -20,16 +20,15 @@ DOCKERFILE='docker-build/remote-installer/Dockerfile'
 
 help()
 {
-    echo -e "$(basename "$0") [-hs] -t <tag>"
+    echo -e "$(basename "$0") [-hs]"
     echo -e "   -h        display this help"
     echo -e "   -s        save image as tar to $TAR_IMAGE"
-    echo -e "   -t <tag>  specify docker base image tag"
     echo
     echo -e "Proxy configuration is taken from environment variables"
     echo -e "http_proxy, https_proxy and no_proxy"
 }
 
-while getopts "hst:" arg; do
+while getopts "hs" arg; do
     case $arg in
         h)
             help
@@ -38,9 +37,6 @@ while getopts "hst:" arg; do
         s)
             SAVE_IMAGE="yes"
             ;;
-        t)
-            BASEIMAGE_TAG="$OPTARG"
-            ;;
   esac
 done
 
@@ -48,7 +44,6 @@ docker build \
   --network=host \
   --no-cache \
   --force-rm \
-  --build-arg BASEIMAGE_TAG="${BASEIMAGE_TAG}" \
   --build-arg HTTP_PROXY="${http_proxy}" \
   --build-arg HTTPS_PROXY="${https_proxy}" \
   --build-arg NO_PROXY="${no_proxy}" \

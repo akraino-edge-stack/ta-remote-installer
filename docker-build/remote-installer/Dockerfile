@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ARG BASEIMAGE_TAG
-
-FROM $BASEIMAGE_TAG
+FROM scratch
+ADD centos-7-docker.tar.xz /
+CMD ["/bin/bash"]
 MAINTAINER Ralf Mueller <ralf.1.mueller@nokia.com>
 
 ENV \
