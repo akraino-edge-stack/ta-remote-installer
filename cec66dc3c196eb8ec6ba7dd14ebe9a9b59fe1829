@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "6226abb9_7dad993e",
+        "filename": "src/remoteinstaller/installer/bmc_management/bmctools.py",
+        "patchSetId": 6
+      },
+      "lineNbr": 204,
+      "author": {
+        "id": 251
+      },
+      "writtenOn": "2020-02-27T13:34:46Z",
+      "side": 1,
+      "message": "Hi Levente,\n\nUnfortunately we do not have any other platform than Ampere to test this change.\n\nRegarding this generic code, the _convert_to_hex() function is the same as the already merged code in ironic-virtualmedia-driver already merged:\nhttps://gerrit.akraino.org/r/gitweb?p\u003dta/ironic-virtmedia-driver.git;a\u003dblob;f\u003dsrc/ironic_virtmedia_driver/vendors/openbmc_hw.py#l41\n\nAlso _convert_to_ascii() was broken and always raised an exception.\nI could not find any usage anywhere in the rest of the code, but decided to fix it instead of removing it altogether.",
+      "revId": "cec66dc3c196eb8ec6ba7dd14ebe9a9b59fe1829",
+      "serverId": "4cada01b-0314-4fe0-84a1-f9ddc89863f9",
+      "unresolved": true
+    }
+  ]
+}
