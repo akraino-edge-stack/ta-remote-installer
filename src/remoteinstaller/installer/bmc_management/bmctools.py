@@ -62,7 +62,7 @@ class BMC(object):
 
         self._run_ipmitool_command('bmc reset cold')
 
-        success = self._wait_for_bmc_reset(180)
+        success = self._wait_for_bmc_reset(360)
         if not success:
             raise BMCException('BMC reset failed, BMC did not come up')
 
