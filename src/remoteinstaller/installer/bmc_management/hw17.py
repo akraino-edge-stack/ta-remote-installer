@@ -12,12 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .bmctools import BMC
+from .bmctools import BMC, BMCException
 import logging
 import time
-
-class BMCException(Exception):
-    pass
 
 class HW17(BMC):
     def __init__(self, host, user, passwd, priv_level='ADMINISTRATOR', log_path=None):

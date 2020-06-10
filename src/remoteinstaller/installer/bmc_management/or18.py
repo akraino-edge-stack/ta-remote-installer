@@ -14,10 +14,7 @@
 
 import logging
 import time
-from .bmctools import BMC
-
-class BMCException(Exception):
-    pass
+from .bmctools import BMC, BMCException
 
 class OR18(BMC):
     def __init__(self, host, user, passwd, priv_level='ADMINISTRATOR', log_path=None):
