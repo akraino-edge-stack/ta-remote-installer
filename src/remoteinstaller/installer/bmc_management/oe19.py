@@ -15,9 +15,6 @@
 from .or18 import OR18
 import logging
 
-class BMCException(Exception):
-    pass
-
 class OE19(OR18):
     def __init__(self, host, user, passwd, priv_level='ADMINISTRATOR', log_path=None):
         super(OE19, self).__init__(host, user, passwd, priv_level, log_path)

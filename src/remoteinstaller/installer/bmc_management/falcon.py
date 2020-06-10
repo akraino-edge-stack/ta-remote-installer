@@ -15,7 +15,7 @@
 
 import logging
 import time
-from .bmctools import BMC
+from .bmctools import BMC, BMCException
 
 RAW_CHECK_NFS_SERVICE_STATUS = '0x32 0xd8 0x06 0x01 0x01 0x00'
 
@@ -44,9 +44,6 @@ RAW_RESTART_RIS =      '0x32 0x9f 0x08 0x0b'
 RAW_GET_MOUNTED_IMG_COUNT = '0x32 0xd8 0x00 0x01'
 RAW_SET_IMG_NAME =  '0x32 0xd7 0x01 0x01 0x01 0x01 %s'
 RAW_STOP_REDIRECT = '0x32 0xd7 0x01 0x01 0x01 0x00 %s'
-
-class BMCException(Exception):
-    pass
 
 class FALCON(BMC):
     def __init__(self, host, user, passwd, priv_level='ADMINISTRATOR', log_path=None):
