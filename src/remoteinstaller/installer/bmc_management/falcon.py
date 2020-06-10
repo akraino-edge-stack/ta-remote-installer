@@ -294,7 +294,7 @@ class FALCON(BMC):
             logging.debug('Setting virtual media image: %s', image_filename)
             self._run_ipmitool_raw_command(RAW_SET_IMG_NAME % self._convert_to_hex(image_filename, True, 64))
         except Exception as err:
-            logging.debug('Exception when setting virtual media image: %s', str(err))
+            logging.warning('Exception when setting virtual media image: %s', str(err))
             return False
         return True
 
@@ -355,7 +355,7 @@ class FALCON(BMC):
         if not self._set_virtual_media_device_count('CD', 1):
             BMCException('Failed to set virtual media device count for CD')
 
-    def attach_virtual_cd(self, nfs_host, nfs_mount, boot_iso_filename):
+    def try_attach_virtual_cd(self, nfs_host, nfs_mount, boot_iso_filename):
         # Detach first
         self._detach_virtual_media()
 
@@ -375,7 +375,7 @@ class FALCON(BMC):
 
         #Setup nfs
         if not self._set_setup_nfs(nfs_host, nfs_mount):
-            raise BMCException("Failed to setup nfs")
+            raise BMCException("Failed to setup NFS")
 
         # Restart Remote Image CD
         if not self._restart_ris_cd():
@@ -390,8 +390,24 @@ class FALCON(BMC):
         if not self._set_image_name(boot_iso_filename):
             raise BMCException("Failed to set image name")
 
-        success = self._wait_for_bmc_nfs_service(90, 'mounted')
-        if success:
-            return True
-        else:
-            raise BMCException('NFS service setup failed')
+        if not self._wait_for_bmc_nfs_service(90, 'mounted'):
+            raise BMCException("NFS service setup failed")
+
+        logging.debug("Virtual Media setup succeeded for nfs://%s/%s/%s",
+                  nfs_host, nfs_mount, boot_iso_filename)
+        return True
+
+    def attach_virtual_cd(self, nfs_host, nfs_mount, boot_iso_filename):
+        tries = 5
+        while tries > 0:
+            try:
+                if self.try_attach_virtual_cd(nfs_host, nfs_mount, boot_iso_filename):
+                    return True
+            except Exception as err:
+                tries -= 1
+                logging.warning("Failed with exception: '%s'. %d tries remaining.",
+                            str(err), tries)
+                if tries <= 0:
+                    raise err
+
+        return False
