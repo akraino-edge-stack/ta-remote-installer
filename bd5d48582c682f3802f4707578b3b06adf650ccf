@@ -1,0 +1,12 @@
+Code-Review+1: Alexandru Avadanii <Alexandru.Avadanii@enea.com>
+Code-Review+1: Valentin Radulescu <valentin.radulescu@enea.com>
+Code-Review+1: Jyrki Aaltonen <jyrki.aaltonen@nokia.com>
+Code-Review+1: Paul Carver <pcarver@att.com>
+Code-Review+1: Robert Eby <re2429@att.com>
+Code-Review+2: Levente Kálé <levente.kale@nokia.com>
+Verified+1: Levente Kálé <levente.kale@nokia.com>
+Submitted-by: Levente Kálé <levente.kale@nokia.com>
+Submitted-at: Fri, 12 Jun 2020 08:35:55 +0000
+Reviewed-on: https://gerrit.akraino.org/r/c/ta/remote-installer/+/3563
+Project: ta/remote-installer
+Branch: refs/heads/master
