@@ -20,5 +20,5 @@ class OE19(OR18):
         super(OE19, self).__init__(host, user, passwd, priv_level, log_path)
 
     def _set_boot_from_virtual_media(self):
-        logging.debug('Set boot from floppy (%s), and boot after that', self._host)
-        self._run_ipmitool_command('chassis bootdev floppy options=persistent')
+        logging.debug('Set boot from cdrom (%s), and boot after that', self._host)
+        self._run_ipmitool_command('chassis bootdev cdrom options=persistent')
